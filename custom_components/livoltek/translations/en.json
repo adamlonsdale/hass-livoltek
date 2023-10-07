@@ -1,0 +1,30 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured",
+            "reauth_successful": "Re-authentication was successful"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication"
+        },
+        "step": {
+            "reauth_confirm": {
+                "data": {
+                    "api_key": "API Key"
+                },
+                "description": "To re-authenticate with Livoltek you'll need to get the API key at {account_url}."
+            },
+            "user": {
+                "data": {
+                    "api_key": "API Key",
+                    "emea_id": "Use EMEA Server?",
+                    "secuid_id": "Security ID obtained from Livoltek Support",
+                    "system_id": "System ID",
+                    "usertoken_id": "User Token generated via Livoltek portal"
+                },
+                "description": "To authenticate with Livoltek you'll need to get the API key at {account_url}.\n\nThe system IDs of registered systems are listed on that same page."
+            }
+        }
+    }
+}
