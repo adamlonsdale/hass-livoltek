@@ -31,6 +31,8 @@
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
+To generate a new version of the API integration package, amend the openapi.yaml file to add further endpoints in and then execute `./scripts/cli-gen.sh`. Options / version number can be modified in the `/scripts/cli-gen-opts.json` file.
+
 ---
 
 [hass-livoltek]: https://github.com/adamlonsdale/hass-livoltek
