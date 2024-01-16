@@ -1,0 +1,6 @@
+{
+    "packageName": "pylivoltek",
+    "projectName": "pylivoltek",
+    "packageVersion": "1.0.0",
+    "library": "urllib3"
+}

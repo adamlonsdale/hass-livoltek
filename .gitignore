@@ -1,0 +1,19 @@
+# artifacts
+__pycache__
+.pytest*
+*.egg-info
+*/build/*
+*/dist/*
+
+*.whl
+
+# misc
+.coverage
+coverage.xml
+
+/out
+
+
+# Home Assistant configuration
+config/*
+!config/configuration.yaml

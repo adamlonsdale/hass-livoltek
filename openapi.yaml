@@ -1,0 +1,515 @@
+openapi: 3.0.0
+info:
+  title: Livoltek API
+  version: 1.0.0
+servers:
+  - url: https://api.livoltek-portal.com:8081
+    description: Worldwide Server
+  - url: https://api-eu.livoltek-portal.com:8081
+    description: EMEA Server
+components:
+  securitySchemes:
+    token:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - token: []
+paths:
+  /hess/api/login:
+    post:
+      summary: API User Login and Get Token
+      description: Get api user token and verify whether the API caller has permission
+      security:
+        - {}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                secuid:
+                  type: string
+                  maxLength: 32
+                  description: Security ID
+                key:
+                  type: string
+                  maxLength: 1024
+                  description: Security Key
+              required:
+                - secuid
+                - key
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Message code
+                  code:
+                    type: string
+                    maxLength: 10
+                    description: http/https response code
+                  data:
+                    type: string
+                    maxLength: 1024
+                    description: Token
+                  msg_code:
+                    type: string
+                    maxLength: 10
+                    description: Message code
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+  /hess/api/userSites/list:
+    get:
+      summary: Site List
+      description: >-
+        Returns a list of sites related to the given token, which is the account api_key. This API accepts parameters for convenient search, sort and pagination.Limit: Only support to 2 searh text at once; Only support to 1 sort text at once
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: powerStationType
+          in: query
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "1"
+              - "2"
+              - "3"
+              - "4"
+          description: >-
+            Power Station Type:
+            1 - Grid-tied solar system
+            2 - Solar storage system
+            3 - EV charging hub
+            4 - EV charging hub with solar storage
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: The first site index to be returned in the results
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: >-
+            Pagesize of each page:
+            - 5
+            - 10
+            - 30
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    maxLength: 64
+                    description: Site name
+                  onlineDevice:
+                    type: string
+                    maxLength: 256
+                    description: Amount of online equipment
+                  updateTime:
+                    type: string
+                    maxLength: 13
+                    description: Latest updated timestamp
+                  currentPower:
+                    type: string
+                    maxLength: 256
+                    description: Real-time power
+                  eoutDaily:
+                    type: string
+                    maxLength: 256
+                    description: Daily generation
+                  eoutMonth:
+                    type: string
+                    maxLength: 256
+                    description: Monthly generation
+                  eoutCurrentYear:
+                    type: string
+                    maxLength: 256
+                    description: Annual generation
+                  eTotalToGrid:
+                    type: string
+                    maxLength: 256
+                    description: Lifetime generation
+                  message:
+                    type: string
+                    maxLength: 64
+                    description: Message code
+                  code:
+                    type: string
+                    maxLength: 10
+                    description: http/https response code
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+  /hess/api/site/{siteId}/overview:
+    get:
+      summary: Site Generation Overview
+      description: >-
+        Return generation review of selected site, including site name，amount of
+        online equipment, latest updated timestamp, power, daily generation,
+        monthly generation, yearly generation, lifetime generation
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Site ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    maxLength: 64
+                    description: Site name
+                  onlineDevice:
+                    type: string
+                    maxLength: 256
+                    description: Amount of online equipment
+                  updateTime:
+                    type: string
+                    maxLength: 13
+                    description: Latest updated timestamp
+                  currentPower:
+                    type: string
+                    maxLength: 256
+                    description: Real-time power
+                  eoutDaily:
+                    type: string
+                    maxLength: 256
+                    description: Daily generation
+                  eoutMonth:
+                    type: string
+                    maxLength: 256
+                    description: Monthly generation
+                  eoutCurrentYear:
+                    type: string
+                    maxLength: 256
+                    description: Annual generation
+                  eTotalToGrid:
+                    type: string
+                    maxLength: 256
+                    description: Lifetime generation
+                  message:
+                    type: string
+                    maxLength: 64
+                    description: Message code
+                  code:
+                    type: string
+                    maxLength: 10
+                    description: http/https response code
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+  /hess/api/device/{deviceId}/realElectricity:
+    get:
+      summary: Device Generation or Consumption
+      description: Return device lifetime generation or consumption
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 10
+          description: Device ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pvProduceElectric:
+                    type: string
+                    description: Inver solar generation
+                  loadCustomerElectric:
+                    type: string
+                    description: >-
+                      load consumptions (only when there is RS485 meter
+                      connected to inverter)
+                  timestamp:
+                    type: integer
+                    format: int64
+                    description: Latest data update time
+                  code:
+                    type: string
+                    description: http/https response code
+                  message:
+                    type: string
+                    description: Message code
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+  /hess/api/site/{siteId}/curPowerflow:
+    get:
+      summary: Current Power Flow
+      description: >-
+        Query the current energy flow of the specified power station to obtain
+        the last update time, status of each system type, parameter unit (W) and
+        value
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Site ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  energyStatus:
+                    type: string
+                    maxLength: 15
+                    description: Battery working status
+                  energyPower:
+                    type: string
+                    description: Battery working power
+                  energySoc:
+                    type: string
+                    description: Battery SoC
+                  pvStatus:
+                    type: string
+                    maxLength: 15
+                    description: PV working status
+                  pvPower:
+                    type: string
+                    description: PV generating power
+                  powerGridStatus:
+                    type: string
+                    maxLength: 15
+                    description: Power grid working status
+                  powerGridPower:
+                    type: string
+                    description: Power grid working power
+                  loadStatus:
+                    type: string
+                    maxLength: 15
+                    description: Load working status
+                  loadPower:
+                    type: string
+                    description: Load consuming power
+                  chargingPileStatus:
+                    type: string
+                    maxLength: 15
+                    description: EV charger working status
+                  chargingPilePower:
+                    type: string
+                    description: EV charger charging power
+                  timestamp:
+                    type: integer
+                    format: int64
+                    description: Latest data update time
+                  code:
+                    type: string
+                    description: http/https response code
+                  message:
+                    type: string
+                    description: Message code
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+  /hess/api/device/{siteId}/list:
+    get:
+      summary: Device List
+      description: >-
+        Return the number of equipment in the specified site, equipment ID,
+        equipment type (inverter, charging pile, electricity meter, etc.),
+        equipment model, equipment SN and equipment manufacturer
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 10
+          description: Site ID
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: The first site index to be returned in the results, default=1
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Pagesize of each page
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: The number of equipment in this site
+                  id:
+                    type: integer
+                    maxLength: 10
+                    description: Device id
+                  inverterSn:
+                    type: string
+                    maxLength: 64
+                    description: Device SN
+                  collectorSn:
+                    type: string
+                    maxLength: 64
+                    description: Device datalogger SN
+                  productType:
+                    type: string
+                    maxLength: 3
+                    description: Device type
+                  deviceManufacturer:
+                    type: string
+                    description: Device Manufacturer
+                  deviceModel:
+                    type: string
+                    description: Device model
+                  code:
+                    type: string
+                    description: http/https response code
+                  message:
+                    type: string
+                    description: Message code
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
