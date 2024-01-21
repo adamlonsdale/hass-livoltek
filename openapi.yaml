@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.1.1
 info:
   title: Livoltek API
   version: 1.0.0
@@ -7,12 +7,6 @@ servers:
     description: Worldwide Server
   - url: https://api-eu.livoltek-portal.com:8081
     description: EMEA Server
-components:
-  securitySchemes:
-    token:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
 security:
   - token: []
 paths:
@@ -133,46 +127,24 @@ paths:
               schema:
                 type: object
                 properties:
-                  name:
-                    type: string
-                    maxLength: 64
-                    description: Site name
-                  onlineDevice:
-                    type: string
-                    maxLength: 256
-                    description: Amount of online equipment
-                  updateTime:
-                    type: string
-                    maxLength: 13
-                    description: Latest updated timestamp
-                  currentPower:
-                    type: string
-                    maxLength: 256
-                    description: Real-time power
-                  eoutDaily:
-                    type: string
-                    maxLength: 256
-                    description: Daily generation
-                  eoutMonth:
-                    type: string
-                    maxLength: 256
-                    description: Monthly generation
-                  eoutCurrentYear:
-                    type: string
-                    maxLength: 256
-                    description: Annual generation
-                  eTotalToGrid:
-                    type: string
-                    maxLength: 256
-                    description: Lifetime generation
-                  message:
-                    type: string
-                    maxLength: 64
-                    description: Message code
                   code:
                     type: string
-                    maxLength: 10
-                    description: http/https response code
+                    description: Message Code
+                  message:
+                    type: string
+                    description: HTTP/HTTPS response code
+                  data:
+                    type: object
+                    description: API Response Data
+                    properties:
+                      count:
+                        type: integer
+                        description: The number of sites
+                      list:
+                        type: array
+                        description: Site List
+                        items:
+                          $ref: '#/components/schemas/SiteList'
         "201":
           description: Created
         "401":
@@ -513,3 +485,56 @@ paths:
           description: Forbidden
         "404":
           description: Not Found
+components:
+  securitySchemes:
+    token:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Site:
+      type: object
+      properties:
+        powerStationId:
+          type: string
+          maxLength: 10
+          description: Site ID
+        powerStationName:
+          type: string
+          maxLength: 64
+          description: Site Name
+        country:
+          type: string
+          maxLength: 255
+          description: Country/Region
+        administrativeRegion:
+          type: string
+          maxLength: 255
+          description: Administrative Division
+        powerStationType:
+          type: string
+          maxLength: 256
+          description: Site Type
+        powerStationStatus:
+          type: integer
+          format: int32
+          description: Site Communication status
+        pvCapacity:
+          type: number
+          format: double
+          description: PV Capacity
+        registrationTime:
+          type: string
+          format: date
+          description: Lifetime generation
+        updateTime:
+          type: string
+          format: date-time
+          description: Latest data update time
+        timeZone:
+          type: string
+          description: Time Zone
+    SiteList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Site'
