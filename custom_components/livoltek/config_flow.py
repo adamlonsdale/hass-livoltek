@@ -6,6 +6,7 @@ from typing import Any
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
+from pylivoltek.models import *
 from pylivoltek.rest import ApiException
 
 # from pylivoltek.exceptions import *
@@ -16,6 +17,7 @@ from pylivoltek.rest import ApiException
 
 import voluptuous as vol
 import ast
+import json
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_API_KEY
@@ -46,17 +48,6 @@ async def validate_input(
     """Try using the give system id & api key against the Livoltek API."""
     session = async_get_clientsession(hass)
 
-    # livoltek = HessApiLogin()
-
-    # if emea:
-    #     livoltek.api_client.configuration.host = LIVOLTEK_EMEA_SERVER
-    # else:
-    #     livoltek.api_client.configuration.host = LIVOLTEK_GLOBAL_SERVER
-
-    # loginBody = Schema(key=api_key, secuid=secuid)
-    # loginResultStr = await hass.async_add_executor_job(livoltek.post(loginBody))
-    # loginResultObj = ast.literal_eval(loginResultStr[0].data)
-
     config = Configuration()
     if emea:
         config.host = LIVOLTEK_EMEA_SERVER
@@ -70,27 +61,21 @@ async def validate_input(
     model = ApiLoginBody(secuid, api_key)
     api = DefaultApi(api_client)
 
-    thread = api.hess_api_login_post_with_http_info(model, async_req=True)
-    loginResultStr = thread.get()
+    thread = api.hess_api_login_post_with_http_info(model, async_req=True, _preload_content=True)
+    threadResult = thread.get()
+    loginResultObj = threadResult[0].data
 
-    loginResultObj = ast.literal_eval(loginResultStr[0].data)
-
-    if not loginResultStr[0].message == "SUCCESS":
-        raise ConfigEntryAuthFailed(loginResultObj["message"])
+    if not threadResult[0].message == "SUCCESS":
+        raise ConfigEntryAuthFailed(threadResult[0].message)
 
     token = loginResultObj["data"]
-
-    api_client.set_default_header("Authorization", "Bearer " + token)
+    api_client.set_default_header("Authorization", token)
     api = DefaultApi(api_client)
 
-    thread = api.hess_api_user_sites_list_get(user_token, size=10, page=0, async_req=True)
+    thread = api.hess_api_user_sites_list_get(user_token, size=10, page=1, async_req=True)
     userSites = thread.get()
 
-    # userSites = await hass.async_create_task(
-    #     api.hess_api_user_sites_list_get(token, user_token)
-    # )
-
-    LOGGER.info(userSites)
+    LOGGER.debug(userSites)
 
 
 class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
