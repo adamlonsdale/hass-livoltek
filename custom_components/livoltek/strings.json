@@ -11,6 +11,12 @@
           "api_key": "[%key:common::config_flow::data::api_key%]"
         }
       },
+      "select_site": {
+        "description": "Please select the site you wish to link to Home Assistant",
+        "data": {
+          "site_id": "Site"
+        }
+      },
       "reauth_confirm": {
         "description": "To re-authenticate with Livoltek you'll need to get the API key at {account_url}.",
         "data": {

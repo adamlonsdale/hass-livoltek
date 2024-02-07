@@ -19,5 +19,7 @@ CONF_SECUID_ID = "secuid_id"
 CONF_EMEA_ID = "emea_id"
 CONF_SITE_ID = "site_id"
 
+DEFAULT_NAME = "Livoltek"
+
 LIVOLTEK_EMEA_SERVER = "https://api-eu.livoltek-portal.com:8081"
 LIVOLTEK_GLOBAL_SERVER = "https://api.livoltek-portal.com:8081"

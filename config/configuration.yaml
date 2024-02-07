@@ -5,7 +5,7 @@ logger:
   logs:
     custom_components.livoltek: debug
     urllib3: debug
-    pylivoltek: debug
+    pylivoltek: warn
 
 http:
   use_x_forwarded_for: true

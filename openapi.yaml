@@ -141,10 +141,8 @@ paths:
                         type: integer
                         description: The number of sites
                       list:
-                        type: array
                         description: Site List
-                        items:
-                          $ref: '#/components/schemas/SiteList'
+                        $ref: '#/components/schemas/SiteList'
         "201":
           description: Created
         "401":
@@ -537,4 +535,5 @@ components:
     SiteList:
       type: array
       items:
+        type: object
         $ref: '#/components/schemas/Site'

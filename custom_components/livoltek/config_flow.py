@@ -2,18 +2,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Dict, Optional
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
-from pylivoltek.models import *
+from pylivoltek.models import Site
 from pylivoltek.rest import ApiException
-
-# from pylivoltek.exceptions import *
-# from pylivoltek.apis.paths.hess_api_login import HessApiLogin
-# from pylivoltek.paths.hess_api_login.post.request_body.content.application_json.schema import (
-#     Schema,
-# )
 
 import voluptuous as vol
 import ast
@@ -23,6 +17,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode, SelectOptionDict
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -39,23 +34,13 @@ from .const import (
     LOGGER,
     LIVOLTEK_EMEA_SERVER,
     LIVOLTEK_GLOBAL_SERVER,
+    DEFAULT_NAME
 )
 
-
-async def validate_input(
-    hass: HomeAssistant, *, secuid: str, api_key: str, emea: bool, user_token: str
-) -> None:
-    """Try using the give system id & api key against the Livoltek API."""
-    session = async_get_clientsession(hass)
-
+async def get_login_token(host: str, api_key: str, secuid: str) -> str:
+    """Get the login token for the Livoltek API."""
     config = Configuration()
-    if emea:
-        config.host = LIVOLTEK_EMEA_SERVER
-    else:
-        config.host = LIVOLTEK_GLOBAL_SERVER
-
-    api_key = api_key.replace("\\r", "\r")
-    api_key = api_key.replace("\\n", "\n")
+    config.host = host
 
     api_client = ApiClient(config)
     model = ApiLoginBody(secuid, api_key)
@@ -68,15 +53,28 @@ async def validate_input(
     if not threadResult[0].message == "SUCCESS":
         raise ConfigEntryAuthFailed(threadResult[0].message)
 
-    token = loginResultObj["data"]
-    api_client.set_default_header("Authorization", token)
-    api = DefaultApi(api_client)
+    return loginResultObj["data"]
 
-    thread = api.hess_api_user_sites_list_get(user_token, size=10, page=1, async_req=True)
-    userSites = thread.get()
+async def validate_input(
+    secuid: str, api_key: str, emea: bool
+) -> str:
+    """Try using the give system id & api key against the Livoltek API."""
 
-    LOGGER.debug(userSites)
+    if emea:
+        host = LIVOLTEK_EMEA_SERVER
+    else:
+        host = LIVOLTEK_GLOBAL_SERVER
 
+    api_key = api_key.replace("\\r", "\r")
+    api_key = api_key.replace("\\n", "\n")
+
+    token = await get_login_token(host, api_key, secuid)
+
+    # Check token is not empty
+    if not token:
+        raise ConfigEntryAuthFailed("empty_token")
+
+    return token
 
 class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for Livoltek."""
@@ -86,6 +84,22 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
     imported_name: str | None = None
     reauth_entry: ConfigEntry | None = None
 
+    data: Optional[Dict[str, Any]]
+    access_token: str
+
+    async def get_sites(self, host: str, access_token: str, user_token: str) -> list[Site]:
+        """Get the login token for the Livoltek API."""
+        config = Configuration()
+        config.host = host
+
+        api_client = ApiClient(config)
+        api_client.set_default_header("Authorization", access_token)
+        api = DefaultApi(api_client)
+
+        thread = api.hess_api_user_sites_list_get_with_http_info(user_token, size=10, page=1, async_req=True, _preload_content=True)
+        user_sites = thread.get()
+        return user_sites[0].data.list
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -94,12 +108,10 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await validate_input(
-                    self.hass,
+                self.access_token = await validate_input(
                     api_key=user_input[CONF_API_KEY],
                     secuid=user_input[CONF_SECUID_ID],
                     emea=user_input[CONF_EMEA_ID],
-                    user_token=user_input[CONF_USERTOKEN_ID],
                 )
             except ConfigEntryAuthFailed:
                 errors["base"] = "invalid_auth"
@@ -107,22 +119,17 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
                 LOGGER.exception("Cannot connect to Livoltek")
                 errors["base"] = "cannot_connect"
             else:
-                await self.async_set_unique_id(str(user_input[CONF_SITE_ID]))
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=self.imported_name or str(user_input[CONF_SITE_ID]),
-                    data={
-                        CONF_SITE_ID: user_input[CONF_SITE_ID],
-                        CONF_API_KEY: user_input[CONF_API_KEY],
-                    },
-                )
+                if not errors:
+                    self.data = user_input
+                    self.data[CONF_SITE_ID] = None
+                    return await self.async_step_select_site()
         else:
             user_input = {}
 
         return self.async_show_form(
             step_id="user",
             description_placeholders={
-                "account_url": "https://Livoltek.org/account.jsp"
+                "account_url": "https://livoltek-portal.com/#/"
             },
             data_schema=vol.Schema(
                 {
@@ -143,6 +150,67 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_select_site(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Allow the user to select a site."""
+        errors = {}
+
+        if user_input is not None:
+            try:
+                if user_input[CONF_SITE_ID] == "":
+                    raise ConfigEntryAuthFailed("empty_site")
+            except ConfigEntryAuthFailed:
+                errors["base"] = "invalid_auth"
+            except ApiException:
+                LOGGER.exception("Cannot connect to Livoltek")
+                errors["base"] = "cannot_connect"
+            else:
+                if not errors:
+                    print ("saving./.")
+                    self.data[CONF_SITE_ID] = user_input[CONF_SITE_ID]
+
+                    await self.async_set_unique_id(str(self.data[CONF_SITE_ID]))
+                    self._abort_if_unique_id_configured()
+                    return self.async_create_entry(
+                        title=self.imported_name or DEFAULT_NAME,
+                        data=self.data
+                    )
+                else:
+                    print(errors)
+        else:
+            emea = bool(self.data[CONF_EMEA_ID])
+            if emea:
+                host = LIVOLTEK_EMEA_SERVER
+            else:
+                host = LIVOLTEK_GLOBAL_SERVER
+
+            sites = await self.get_sites(host, self.access_token, self.data[CONF_USERTOKEN_ID])
+            user_input = {}
+
+        return self.async_show_form(
+            step_id="select_site",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_SITE_ID, default=user_input.get(CONF_SITE_ID, "")): SelectSelector(
+                    SelectSelectorConfig(options=(self.get_site_list(sites)), mode=SelectSelectorMode.DROPDOWN),
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
+    def get_site_list(self, site_results: list[Site],
+    ) -> list[SelectOptionDict]:
+        """Return a set of nearby sensors as SelectOptionDict objects."""
+
+        return [
+            SelectOptionDict(
+                value=str(result["powerStationId"]), label=str(result["powerStationName"])
+            )
+            for result in site_results
+        ]
+
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle initiation of re-authentication with Livoltek."""
         self.reauth_entry = self.hass.config_entries.async_get_entry(
@@ -159,11 +227,9 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None and self.reauth_entry:
             try:
                 await validate_input(
-                    self.hass,
-                    api_key=user_input[CONF_API_KEY],
                     secuid=user_input[CONF_SECUID_ID],
+                    api_key=user_input[CONF_API_KEY],
                     emea=user_input[CONF_EMEA_ID],
-                    user_token=user_input[CONF_USERTOKEN_ID],
                 )
             except ConfigEntryAuthFailed:
                 errors["base"] = "invalid_auth"
