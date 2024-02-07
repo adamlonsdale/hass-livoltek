@@ -167,7 +167,6 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             else:
                 if not errors:
-                    print ("saving./.")
                     self.data[CONF_SITE_ID] = user_input[CONF_SITE_ID]
 
                     await self.async_set_unique_id(str(self.data[CONF_SITE_ID]))
@@ -176,8 +175,6 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
                         title=self.imported_name or DEFAULT_NAME,
                         data=self.data
                     )
-                else:
-                    print(errors)
         else:
             emea = bool(self.data[CONF_EMEA_ID])
             if emea:
