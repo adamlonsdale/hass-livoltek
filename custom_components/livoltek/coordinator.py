@@ -10,8 +10,8 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_SYSTEM_ID, DOMAIN, LOGGER, SCAN_INTERVAL
-
+from .const import CONF_SYSTEM_ID, DOMAIN, LOGGER, SCAN_INTERVAL, CONF_USERTOKEN_ID, CONF_SITE_ID
+from .helper import async_get_api_client, async_get_site
 
 class LivoltekDataUpdateCoordinator(DataUpdateCoordinator[any]):
     """The Livoltek Data Update Coordinator."""
@@ -33,6 +33,9 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator[any]):
     async def _async_update_data(self) -> any:
         """Fetch system status from Livoltek."""
         # try:
+        api = await async_get_api_client(self.config_entry)
+        site = await async_get_site(api, self.config_entry.data[CONF_USERTOKEN_ID], self.config_entry.data[CONF_SITE_ID])
+        print(site)
         return await self.Livoltek.status()
         # except LivoltekNoDataError as err:
         #     raise UpdateFailed("Livoltek has no data available") from err

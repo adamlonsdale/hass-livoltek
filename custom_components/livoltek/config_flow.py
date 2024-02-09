@@ -19,6 +19,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode, SelectOptionDict
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+from .helper import async_get_login_token
+
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -37,24 +40,6 @@ from .const import (
     DEFAULT_NAME
 )
 
-async def get_login_token(host: str, api_key: str, secuid: str) -> str:
-    """Get the login token for the Livoltek API."""
-    config = Configuration()
-    config.host = host
-
-    api_client = ApiClient(config)
-    model = ApiLoginBody(secuid, api_key)
-    api = DefaultApi(api_client)
-
-    thread = api.hess_api_login_post_with_http_info(model, async_req=True, _preload_content=True)
-    threadResult = thread.get()
-    loginResultObj = threadResult[0].data
-
-    if not threadResult[0].message == "SUCCESS":
-        raise ConfigEntryAuthFailed(threadResult[0].message)
-
-    return loginResultObj["data"]
-
 async def validate_input(
     secuid: str, api_key: str, emea: bool
 ) -> str:
@@ -68,7 +53,7 @@ async def validate_input(
     api_key = api_key.replace("\\r", "\r")
     api_key = api_key.replace("\\n", "\n")
 
-    token = await get_login_token(host, api_key, secuid)
+    token = await async_get_login_token(host, api_key, secuid)
 
     # Check token is not empty
     if not token:

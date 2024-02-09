@@ -189,38 +189,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  name:
-                    type: string
-                    maxLength: 64
-                    description: Site name
-                  onlineDevice:
-                    type: string
-                    maxLength: 256
-                    description: Amount of online equipment
-                  updateTime:
-                    type: string
-                    maxLength: 13
-                    description: Latest updated timestamp
-                  currentPower:
-                    type: string
-                    maxLength: 256
-                    description: Real-time power
-                  eoutDaily:
-                    type: string
-                    maxLength: 256
-                    description: Daily generation
-                  eoutMonth:
-                    type: string
-                    maxLength: 256
-                    description: Monthly generation
-                  eoutCurrentYear:
-                    type: string
-                    maxLength: 256
-                    description: Annual generation
-                  eTotalToGrid:
-                    type: string
-                    maxLength: 256
-                    description: Lifetime generation
+                  data:
+                    type: object
+                    description: Site Overview
+                    $ref: '#/components/schemas/SiteOverview'
                   message:
                     type: string
                     maxLength: 64
@@ -529,7 +501,7 @@ components:
           type: string
           format: date-time
           description: Latest data update time
-        timeZone:
+        timezone:
           type: string
           description: Time Zone
     SiteList:
@@ -537,3 +509,38 @@ components:
       items:
         type: object
         $ref: '#/components/schemas/Site'
+    SiteOverview:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 64
+          description: Site name
+        onlineDevice:
+          type: string
+          maxLength: 256
+          description: Amount of online equipment
+        updateTime:
+          type: string
+          maxLength: 13
+          description: Latest updated timestamp
+        currentPower:
+          type: string
+          maxLength: 256
+          description: Real-time power
+        eoutDaily:
+          type: string
+          maxLength: 256
+          description: Daily generation
+        eoutMonth:
+          type: string
+          maxLength: 256
+          description: Monthly generation
+        eoutCurrentYear:
+          type: string
+          maxLength: 256
+          description: Annual generation
+        eTotalToGrid:
+          type: string
+          maxLength: 256
+          description: Lifetime generation

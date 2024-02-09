@@ -4,8 +4,13 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, PLATFORMS
+from .const import DOMAIN, PLATFORMS, CONF_EMEA_ID, LIVOLTEK_EMEA_SERVER, LIVOLTEK_GLOBAL_SERVER
 from .coordinator import LivoltekDataUpdateCoordinator
+
+from pylivoltek import ApiClient, ApiLoginBody, Configuration
+from pylivoltek.api import DefaultApi
+from pylivoltek.models import Site
+from pylivoltek.rest import ApiException
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -17,7 +22,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
-
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload Livoltek config entry."""
