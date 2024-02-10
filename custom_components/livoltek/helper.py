@@ -1,15 +1,17 @@
 """Livoltek API Helpers."""
 from __future__ import annotations
+import asyncio
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_API_KEY
+from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN, PLATFORMS, CONF_EMEA_ID, LIVOLTEK_EMEA_SERVER, LIVOLTEK_GLOBAL_SERVER, CONF_SECUID_ID, CONF_USERTOKEN_ID
+from .const import DOMAIN, PLATFORMS, CONF_EMEA_ID, LIVOLTEK_EMEA_SERVER, LIVOLTEK_GLOBAL_SERVER, CONF_SECUID_ID, CONF_USERTOKEN_ID, CONF_SITE_ID
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
-from pylivoltek.models import Site
+from pylivoltek.models import Site, CurrentPowerFlow, DeviceList, Device, DeviceDetails
 from pylivoltek.rest import ApiException
 
 from homeassistant.exceptions import (
@@ -57,17 +59,57 @@ async def async_get_api_client(entry: ConfigEntry) -> DefaultApi:
 
     api_client = ApiClient(config)
     api_client.set_default_header("Authorization", token)
-    print("token: " + token)
     return DefaultApi(api_client)
 
 
 async def async_get_site(api: DefaultApi, user_token: str, site_id: str) -> Site:
     """Get the Livoltek API client."""
 
-    print (api.api_client.configuration.host)
-    print (api.api_client.default_headers)
-    print ("user_token: " + user_token)
     thread = api.hess_api_site_site_id_overview_get_with_http_info(user_token, site_id, async_req=True)
     site = thread.get()
-    print(site)
     return site
+
+async def async_get_cur_power_flow(api: DefaultApi, user_token: str, site_id: str) -> CurrentPowerFlow:
+    """Get the Livoltek API client."""
+
+    thread = api.hess_api_site_site_id_cur_powerflow_get_with_http_info(user_token, site_id, async_req=True)
+    current_power_flow = thread.get()
+    return current_power_flow
+
+async def async_get_device_list(api: DefaultApi, user_token: str, site_id: str) -> DeviceList:
+    """Get the Livoltek API client."""
+
+    thread = api.hess_api_device_site_id_list_get_with_http_info(user_token, site_id, 1, 10, async_req=True)
+    device_list = thread.get()
+    return device_list[0].data["list"]
+
+async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
+    """Update Livoltek devices."""
+
+    api = await async_get_api_client(entry)
+    user_token = str(entry.data[CONF_USERTOKEN_ID])
+    site_id = str(entry.data[CONF_SITE_ID])
+
+    async with asyncio.timeout(10):
+        device_list = await async_get_device_list(api, user_token, site_id)
+
+    await async_register_devices(api, entry, user_token, site_id, device_list, hass)
+
+async def async_register_devices(api: DefaultApi, entry: ConfigEntry, user_token: str, site_id: str, device_list: DeviceList, hass: HomeAssistant) -> None:
+    """Register Livoltek devices."""
+    device_registry = dr.async_get(hass)
+
+    for device in device_list:
+        async with asyncio.timeout(10):
+            thread = api.get_device_details(user_token, site_id, device["inverterSn"], async_req=True, _preload_content=True)
+            dev = thread.get().data
+
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, dev.id)},
+            manufacturer=dev.device_manufacturer,
+            name=dev.inverter_sn,
+            model=dev.product_type,
+            serial_number=dev.inverter_sn,
+            sw_version=dev.firmware_version,
+        )

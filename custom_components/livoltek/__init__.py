@@ -12,10 +12,14 @@ from pylivoltek.api import DefaultApi
 from pylivoltek.models import Site
 from pylivoltek.rest import ApiException
 
+from .helper import async_update_devices
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Livoltek from a config entry."""
     coordinator = LivoltekDataUpdateCoordinator(hass, entry)
+
+    await async_update_devices(entry, hass)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
