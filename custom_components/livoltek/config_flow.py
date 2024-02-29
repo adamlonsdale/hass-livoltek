@@ -17,7 +17,12 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode, SelectOptionDict
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    SelectOptionDict,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .helper import async_get_login_token
@@ -37,12 +42,11 @@ from .const import (
     LOGGER,
     LIVOLTEK_EMEA_SERVER,
     LIVOLTEK_GLOBAL_SERVER,
-    DEFAULT_NAME
+    DEFAULT_NAME,
 )
 
-async def validate_input(
-    secuid: str, api_key: str, emea: bool
-) -> str:
+
+async def validate_input(secuid: str, api_key: str, emea: bool) -> str:
     """Try using the give system id & api key against the Livoltek API."""
 
     if emea:
@@ -72,7 +76,9 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
     data: Optional[Dict[str, Any]]
     access_token: str
 
-    async def get_sites(self, host: str, access_token: str, user_token: str) -> list[Site]:
+    async def get_sites(
+        self, host: str, access_token: str, user_token: str
+    ) -> list[Site]:
         """Get the login token for the Livoltek API."""
         config = Configuration()
         config.host = host
@@ -81,7 +87,9 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         api_client.set_default_header("Authorization", access_token)
         api = DefaultApi(api_client)
 
-        thread = api.hess_api_user_sites_list_get_with_http_info(user_token, size=10, page=1, async_req=True, _preload_content=True)
+        thread = api.hess_api_user_sites_list_get_with_http_info(
+            user_token, size=10, page=1, async_req=True, _preload_content=True
+        )
         user_sites = thread.get()
         return user_sites[0].data.list
 
@@ -113,9 +121,7 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            description_placeholders={
-                "account_url": "https://livoltek-portal.com/#/"
-            },
+            description_placeholders={"account_url": "https://livoltek-portal.com/#/"},
             data_schema=vol.Schema(
                 {
                     vol.Required(
@@ -157,8 +163,7 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
                     await self.async_set_unique_id(str(self.data[CONF_SITE_ID]))
                     self._abort_if_unique_id_configured()
                     return self.async_create_entry(
-                        title=self.imported_name or DEFAULT_NAME,
-                        data=self.data
+                        title=self.imported_name or DEFAULT_NAME, data=self.data
                     )
         else:
             emea = bool(self.data[CONF_EMEA_ID])
@@ -167,28 +172,38 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
             else:
                 host = LIVOLTEK_GLOBAL_SERVER
 
-            sites = await self.get_sites(host, self.access_token, self.data[CONF_USERTOKEN_ID])
+            sites = await self.get_sites(
+                host, self.access_token, self.data[CONF_USERTOKEN_ID]
+            )
             user_input = {}
 
         return self.async_show_form(
             step_id="select_site",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_SITE_ID, default=user_input.get(CONF_SITE_ID, "")): SelectSelector(
-                    SelectSelectorConfig(options=(self.get_site_list(sites)), mode=SelectSelectorMode.DROPDOWN),
+                    vol.Required(
+                        CONF_SITE_ID, default=user_input.get(CONF_SITE_ID, "")
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=(self.get_site_list(sites)),
+                            mode=SelectSelectorMode.DROPDOWN,
+                        ),
                     ),
                 }
             ),
             errors=errors,
         )
 
-    def get_site_list(self, site_results: list[Site],
+    def get_site_list(
+        self,
+        site_results: list[Site],
     ) -> list[SelectOptionDict]:
         """Return a set of nearby sensors as SelectOptionDict objects."""
 
         return [
             SelectOptionDict(
-                value=str(result["powerStationId"]), label=str(result["powerStationName"])
+                value=str(result["powerStationId"]),
+                label=str(result["powerStationName"]),
             )
             for result in site_results
         ]

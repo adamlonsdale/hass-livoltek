@@ -7,12 +7,22 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_API_KEY
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN, PLATFORMS, CONF_EMEA_ID, LIVOLTEK_EMEA_SERVER, LIVOLTEK_GLOBAL_SERVER, CONF_SECUID_ID, CONF_USERTOKEN_ID, CONF_SITE_ID
+from .const import (
+    DOMAIN,
+    PLATFORMS,
+    CONF_EMEA_ID,
+    LIVOLTEK_EMEA_SERVER,
+    LIVOLTEK_GLOBAL_SERVER,
+    CONF_SECUID_ID,
+    CONF_USERTOKEN_ID,
+    CONF_SITE_ID,
+)
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
 from pylivoltek.models import Site, CurrentPowerFlow, DeviceList, Device, DeviceDetails
 from pylivoltek.rest import ApiException
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -32,7 +42,9 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     model = ApiLoginBody(secuid, api_key)
     api = DefaultApi(api_client)
 
-    thread = api.hess_api_login_post_with_http_info(model, async_req=True, _preload_content=True)
+    thread = api.hess_api_login_post_with_http_info(
+        model, async_req=True, _preload_content=True
+    )
     threadResult = thread.get()
     loginResultObj = threadResult[0].data
 
@@ -65,7 +77,9 @@ async def async_get_api_client(entry: ConfigEntry) -> DefaultApi:
 async def async_get_site(api: DefaultApi, user_token: str, site_id: str) -> Site:
     """Get the Livoltek API client."""
 
-    thread = api.hess_api_site_site_id_overview_get_with_http_info(user_token, site_id, async_req=True)
+    thread = api.hess_api_site_site_id_overview_get_with_http_info(
+        user_token, site_id, async_req=True
+    )
     site = thread.get()
     return site
 
@@ -76,10 +90,15 @@ async def async_get_cur_power_flow(api: DefaultApi, user_token: str, site_id: st
     current_power_flow = thread.get()
     return current_power_flow
 
-async def async_get_device_list(api: DefaultApi, user_token: str, site_id: str) -> DeviceList:
+
+async def async_get_device_list(
+    api: DefaultApi, user_token: str, site_id: str
+) -> DeviceList:
     """Get the Livoltek API client."""
 
-    thread = api.hess_api_device_site_id_list_get_with_http_info(user_token, site_id, 1, 10, async_req=True)
+    thread = api.hess_api_device_site_id_list_get_with_http_info(
+        user_token, site_id, 1, 10, async_req=True
+    )
     device_list = thread.get()
     return device_list[0].data["list"]
 
@@ -95,13 +114,27 @@ async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
 
     await async_register_devices(api, entry, user_token, site_id, device_list, hass)
 
-async def async_register_devices(api: DefaultApi, entry: ConfigEntry, user_token: str, site_id: str, device_list: DeviceList, hass: HomeAssistant) -> None:
+
+async def async_register_devices(
+    api: DefaultApi,
+    entry: ConfigEntry,
+    user_token: str,
+    site_id: str,
+    device_list: DeviceList,
+    hass: HomeAssistant,
+) -> None:
     """Register Livoltek devices."""
     device_registry = dr.async_get(hass)
 
     for device in device_list:
         async with asyncio.timeout(10):
-            thread = api.get_device_details(user_token, site_id, device["inverterSn"], async_req=True, _preload_content=True)
+            thread = api.get_device_details(
+                user_token,
+                site_id,
+                device["inverterSn"],
+                async_req=True,
+                _preload_content=True,
+            )
             dev = thread.get().data
 
         device_registry.async_get_or_create(
@@ -113,3 +146,17 @@ async def async_register_devices(api: DefaultApi, entry: ConfigEntry, user_token
             serial_number=dev.inverter_sn,
             sw_version=dev.firmware_version,
         )
+
+
+async def async_get_hass_device_info(
+    entry: ConfigEntry, device: DeviceDetails
+) -> DeviceInfo:
+    """Get device info for Home Assistant."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, device.id)},
+        manufacturer=device.device_manufacturer,
+        name=device.inverter_sn,
+        model=device.product_type,
+        sw_version=device.firmware_version,
+        serial_number=device.inverter_sn,
+    )

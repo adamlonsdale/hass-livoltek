@@ -1,8 +1,12 @@
-"""Support for getting collected information from Livoltek."""
+"""Support for Livoltek device sensors."""
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+import dataclasses
+from typing import Any
+
+from pylivoltek.models import DeviceDetails, Site
+from pylivoltek.api import DefaultApi
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -10,146 +14,121 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
+
 from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfElectricCurrent,
     UnitOfElectricPotential,
-    UnitOfEnergy,
     UnitOfPower,
+    UnitOfEnergy,
     UnitOfTemperature,
 )
+
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_SYSTEM_ID, DOMAIN
-from .coordinator import LivoltekDataUpdateCoordinator
+from .helper import async_get_api_client
+from .const import DOMAIN, CONF_SITE_ID
+from . import LivoltekInverterDevice
 
 
-@dataclass
-class LivoltekSensorEntityDescriptionMixin:
+@dataclasses.dataclass(frozen=True)
+class LivoltekRequiredKeysMixin:
     """Mixin for required keys."""
 
-    value_fn: Callable[[any], int | float | None]
+    value_fn: Callable[[Any], float]
+    enabled: Callable[[Any], bool]
 
 
-@dataclass
+@dataclasses.dataclass(frozen=True)
 class LivoltekSensorEntityDescription(
-    SensorEntityDescription, LivoltekSensorEntityDescriptionMixin
+    SensorEntityDescription, LivoltekRequiredKeysMixin
 ):
-    """Describes a Livoltek sensor entity."""
+    """Describes Livoltek sensor entity."""
 
 
-SENSORS: tuple[LivoltekSensorEntityDescription, ...] = (
+SENSORS = [
     LivoltekSensorEntityDescription(
-        key="energy_consumption",
-        name="Energy consumed",
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        value_fn=lambda status: status.energy_consumption,
-    ),
-    LivoltekSensorEntityDescription(
-        key="energy_generation",
-        name="Energy generated",
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        value_fn=lambda status: status.energy_generation,
-    ),
-    LivoltekSensorEntityDescription(
-        key="normalized_output",
-        name="Efficiency",
-        native_unit_of_measurement=(
-            f"{UnitOfEnergy.KILO_WATT_HOUR}/{UnitOfPower.KILO_WATT}"
-        ),
+        key="battery_soc",
+        device_class=SensorDeviceClass.BATTERY,
+        native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda status: status.normalized_output,
+        suggested_display_precision=0,
+        enabled=lambda x: x.current_power_flow is not None,
+        value_fn=lambda x: x.current_power_flow.energy_soc
+        if x.current_power_flow
+        else None,
     ),
-    LivoltekSensorEntityDescription(
-        key="power_consumption",
-        name="Power consumed",
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda status: status.power_consumption,
-    ),
-    LivoltekSensorEntityDescription(
-        key="power_generation",
-        name="Power generated",
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda status: status.power_generation,
-    ),
-    LivoltekSensorEntityDescription(
-        key="temperature",
-        name="Temperature",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda status: status.temperature,
-    ),
-    LivoltekSensorEntityDescription(
-        key="voltage",
-        name="Voltage",
-        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
-        device_class=SensorDeviceClass.VOLTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda status: status.voltage,
-    ),
-)
+]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up a Livoltek sensors based on a config entry."""
-    coordinator: LivoltekDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    system = await coordinator.Livoltek.system()
+    """Set up Livoltek device sensors based on config_entry."""
+    site_id = entry.data[CONF_SITE_ID]
+    api = await async_get_api_client(entry)
 
-    async_add_entities(
-        LivoltekSensorEntity(
-            coordinator=coordinator,
-            description=description,
-            system_id=entry.data[CONF_SYSTEM_ID],
-            system=system,
-        )
-        for description in SENSORS
-    )
+    entities: list[LivoltekValueSensor] = [
+        LivoltekValueSensor(api, site_id, description) for description in SENSORS
+    ]
+
+    async_add_entities(entities, True)
 
 
-class LivoltekSensorEntity(
-    CoordinatorEntity[LivoltekDataUpdateCoordinator], SensorEntity
-):
-    """Representation of a Livoltek sensor."""
+class LivoltekInverterSensor(SensorEntity):
+    """Representation of a Livoltek Inverter Sensor."""
 
     entity_description: LivoltekSensorEntityDescription
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        *,
-        coordinator: LivoltekDataUpdateCoordinator,
+        api: DefaultApi,
+        device: LivoltekInverterDevice,
         description: LivoltekSensorEntityDescription,
-        system_id: str,
-        system: any,
     ) -> None:
-        """Initialize a Livoltek sensor."""
-        super().__init__(coordinator=coordinator)
+        """Initialize the sensor."""
+        self._api = api
+        self._device = device
         self.entity_description = description
-        self._attr_unique_id = f"{system_id}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            configuration_url=f"https://Livoltek.org/list.jsp?sid={system_id}",
-            identifiers={(DOMAIN, str(system_id))},
-            manufacturer="Livoltek",
-            model=system.inverter_brand,
-            name=system.system_name,
-        )
+        self._attr_unique_id = f"{device.inverter_sn}-{device.id}-{description.key}"
+        self._attr_device_info = {}
 
     @property
-    def native_value(self) -> int | float | None:
-        """Return the state of the device."""
-        return self.entity_description.value_fn(self.coordinator.data)
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        return self.entity_description.value_fn(self._api)
+
+    async def async_update(self) -> None:
+        """Retrieve latest state."""
+        await self._api.async_update()
+
+
+class LivoltekValueSensor(SensorEntity):
+    """Representation of a Livoltek Value Sensor."""
+
+    entity_description: LivoltekSensorEntityDescription
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        api: DefaultApi,
+        site_id: str,
+        description: LivoltekSensorEntityDescription,
+    ) -> None:
+        """Initialize the sensor."""
+        self._api = api
+        self.entity_description = description
+        self._attr_unique_id = f"{site_id}-{description.key}"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        return self.entity_description.value_fn(self._api)
+
+    async def async_update(self) -> None:
+        """Retrieve latest state."""
+        await self._api.async_update()

@@ -9,6 +9,7 @@ from homeassistant.const import Platform
 
 DOMAIN: Final = "livoltek"
 PLATFORMS = [Platform.SENSOR]
+ATTRIBUTION = "Data provided by Livoltek"
 
 LOGGER = logging.getLogger(__package__)
 SCAN_INTERVAL = timedelta(minutes=5)
@@ -18,6 +19,8 @@ CONF_USERTOKEN_ID = "usertoken_id"
 CONF_SECUID_ID = "secuid_id"
 CONF_EMEA_ID = "emea_id"
 CONF_SITE_ID = "site_id"
+
+DATA_ACCESS_TOKEN = "access_token"
 
 DEFAULT_NAME = "Livoltek"
 
