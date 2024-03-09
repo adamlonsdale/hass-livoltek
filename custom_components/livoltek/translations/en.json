@@ -26,5 +26,24 @@
                 "description": "To authenticate with Livoltek you'll need to get the API key at {account_url}.\n\nThe system IDs of registered systems are listed on that same page."
             }
         }
+    },
+    "entity": {
+        "sensor": {
+            "energy_power": {
+                "name": "Battery Power"
+            },
+            "load_power": {
+                "name": "Load Consumption"
+            },
+            "pv_power": {
+                "name": "Solar Generation Power"
+            },
+            "power_grid_power": {
+                "name": "Grid Import Power"
+            },
+            "battery_soc": {
+                "name": "Battery SoC"
+            }
+        }
     }
 }

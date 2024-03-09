@@ -32,5 +32,24 @@
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
     }
+  },
+  "entity": {
+    "sensor": {
+      "energy_power": {
+        "friendly_name": "Battery Power"
+      },
+      "load_power": {
+        "friendly_name": "Load Consumption"
+      },
+      "pv_power": {
+        "name": "Solar Generation Power"
+      },
+      "power_grid_power": {
+        "name": "Grid Import Power"
+      },
+      "battery_soc": {
+        "name": "Battery SoC"
+      }
+    }
   }
 }

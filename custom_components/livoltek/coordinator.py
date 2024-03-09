@@ -11,7 +11,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    CONF_SYSTEM_ID,
     DOMAIN,
     LOGGER,
     SCAN_INTERVAL,
@@ -27,16 +26,16 @@ from .helper import (
     async_get_cur_power_flow,
     async_get_device_list,
     async_update_devices,
+    validate_jwt,
 )
 
 
-class LivoltekDataUpdateCoordinator(DataUpdateCoordinator[any]):
+class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
     """The Livoltek Data Update Coordinator."""
 
     config_entry: ConfigEntry
     hass: HomeAssistant
-
-    access_token: str
+    access_token: str = None
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the Livoltek coordinator."""
@@ -50,10 +49,9 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator[any]):
 
         super().__init__(hass, LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
-    async def _async_update_data(self) -> any:
+    async def _async_update_data(self):
         """Fetch system status from Livoltek."""
-        # try:
-        api = await async_get_api_client(self.config_entry)
+        api = await async_get_api_client(self.config_entry, self.access_token)
 
         site = await async_get_site(
             api,

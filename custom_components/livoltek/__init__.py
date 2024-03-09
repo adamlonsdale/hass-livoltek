@@ -26,7 +26,6 @@ from .helper import (
     async_update_devices,
     async_get_api_client,
     async_get_cur_power_flow,
-    async_get_signal_device_status,
 )
 from homeassistant.util import Throttle
 
@@ -44,11 +43,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return True
 
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload Livoltek config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         del hass.data[DOMAIN][entry.entry_id]
     return unload_ok
+
 
 class LivoltekInverterDevice:
     """Representation of a Livoltek Inverter Device."""

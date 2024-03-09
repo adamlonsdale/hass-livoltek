@@ -6,6 +6,9 @@ logger:
     custom_components.livoltek: debug
     urllib3: debug
     pylivoltek: warn
+    homeassistant.setup: error
+    homeassistant.loader: error
+    homeassistant.components.sensor: debug
 
 http:
   use_x_forwarded_for: true

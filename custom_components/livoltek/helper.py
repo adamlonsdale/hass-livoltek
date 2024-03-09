@@ -6,6 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_API_KEY
 from homeassistant.helpers import device_registry as dr
+from homeassistant.auth.jwt_wrapper import PyJWT
 
 from .const import (
     DOMAIN,
@@ -16,6 +17,7 @@ from .const import (
     CONF_SECUID_ID,
     CONF_USERTOKEN_ID,
     CONF_SITE_ID,
+    DATA_ACCESS_TOKEN,
 )
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
@@ -29,6 +31,15 @@ from homeassistant.exceptions import (
     ConfigEntryNotReady,
     HomeAssistantError,
 )
+
+
+def validate_jwt(jwt: str) -> bool:
+    try:
+        PyJWT(jwt)
+        return True
+    except Exception as e:
+        return False
+
 
 async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     """Get the login token for the Livoltek API."""
@@ -53,7 +64,10 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
 
     return loginResultObj["data"]
 
-async def async_get_api_client(entry: ConfigEntry) -> DefaultApi:
+
+async def async_get_api_client(entry: ConfigEntry, access_token: str = None) -> tuple(
+    DefaultApi, str
+):
     """Get the Livoltek API client."""
     config = Configuration()
 
@@ -67,7 +81,11 @@ async def async_get_api_client(entry: ConfigEntry) -> DefaultApi:
         host = LIVOLTEK_GLOBAL_SERVER
     config.host = host
 
-    token = await async_get_login_token(host, api_key, secuid)
+    if access_token is None:
+        access_token = ""
+
+    if not validate_jwt(access_token):
+        token = await async_get_login_token(host, api_key, secuid)
 
     api_client = ApiClient(config)
     api_client.set_default_header("Authorization", token)
@@ -83,10 +101,15 @@ async def async_get_site(api: DefaultApi, user_token: str, site_id: str) -> Site
     site = thread.get()
     return site
 
-async def async_get_cur_power_flow(api: DefaultApi, user_token: str, site_id: str) -> CurrentPowerFlow:
+
+async def async_get_cur_power_flow(
+    api: DefaultApi, user_token: str, site_id: str
+) -> CurrentPowerFlow:
     """Get the Livoltek API client."""
 
-    thread = api.hess_api_site_site_id_cur_powerflow_get_with_http_info(user_token, site_id, async_req=True)
+    thread = api.hess_api_site_site_id_cur_powerflow_get_with_http_info(
+        user_token, site_id, async_req=True
+    )
     current_power_flow = thread.get()
     return current_power_flow
 
@@ -101,6 +124,7 @@ async def async_get_device_list(
     )
     device_list = thread.get()
     return device_list[0].data["list"]
+
 
 async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
     """Update Livoltek devices."""
