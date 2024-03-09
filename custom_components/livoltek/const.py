@@ -12,7 +12,7 @@ PLATFORMS = [Platform.SENSOR]
 ATTRIBUTION = "Data provided by Livoltek"
 
 LOGGER = logging.getLogger(__package__)
-SCAN_INTERVAL = timedelta(minutes=5)
+SCAN_INTERVAL = timedelta(minutes=2, seconds=30)
 CONF_SYSTEM_ID = "system_id"
 
 CONF_USERTOKEN_ID = "usertoken_id"
