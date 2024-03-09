@@ -36,10 +36,10 @@
   "entity": {
     "sensor": {
       "energy_power": {
-        "friendly_name": "Battery Power"
+        "name": "Battery Power"
       },
       "load_power": {
-        "friendly_name": "Load Consumption"
+        "name": "Load Consumption"
       },
       "pv_power": {
         "name": "Solar Generation Power"
