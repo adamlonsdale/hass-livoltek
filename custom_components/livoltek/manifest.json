@@ -1,12 +1,17 @@
 {
   "domain": "livoltek",
   "name": "Livoltek",
-  "codeowners": ["@adamlonsdale"],
+  "codeowners": [
+    "@adamlonsdale"
+  ],
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/livoltek",
+  "documentation": "https://github.com/adamlonsdale/hass-livoltek",
+  "issue_tracker": "https://github.com/adamlonsdale/hass-livoltek/issues",
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "quality_scale": "platinum",
-  "requirements": ["pylivoltek==1.0.0"],
+  "requirements": [
+    "pylivoltek==1.0.0"
+  ],
   "version": "0.0.1"
 }
