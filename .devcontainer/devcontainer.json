@@ -3,7 +3,6 @@
     "context": "..",
     "dockerFile": "./Dockerfile",
     "postCreateCommand": "scripts/setup",
-    "postStartCommand": "scripts/bootstrap",
     "containerEnv": {
         "DEVCONTAINER": "1"
     },

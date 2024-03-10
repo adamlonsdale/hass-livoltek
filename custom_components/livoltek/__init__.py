@@ -9,23 +9,14 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .const import (
     DOMAIN,
     PLATFORMS,
-    CONF_EMEA_ID,
-    LIVOLTEK_EMEA_SERVER,
-    LIVOLTEK_GLOBAL_SERVER,
-    CONF_USERTOKEN_ID,
-    CONF_SITE_ID,
 )
 from .coordinator import LivoltekDataUpdateCoordinator
 
-from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
-from pylivoltek.models import Site, DeviceDetails
-from pylivoltek.rest import ApiException
+from pylivoltek.models import DeviceDetails
 
 from .helper import (
     async_update_devices,
-    async_get_api_client,
-    async_get_cur_power_flow,
 )
 from homeassistant.util import Throttle
 

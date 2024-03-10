@@ -2,20 +2,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Dict, Optional
+from typing import Any
 
-from pylivoltek import ApiClient, ApiLoginBody, Configuration
+from pylivoltek import ApiClient, Configuration
 from pylivoltek.api import DefaultApi
 from pylivoltek.models import Site
 from pylivoltek.rest import ApiException
 
 import voluptuous as vol
-import ast
-import json
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     SelectSelector,
@@ -23,14 +20,11 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     SelectOptionDict,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .helper import async_get_login_token
 
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
-    ConfigEntryNotReady,
-    HomeAssistantError,
 )
 
 from .const import (
@@ -73,7 +67,7 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
     imported_name: str | None = None
     reauth_entry: ConfigEntry | None = None
 
-    data: Optional[Dict[str, Any]]
+    data: dict[str, Any] | None
     access_token: str
 
     async def get_sites(

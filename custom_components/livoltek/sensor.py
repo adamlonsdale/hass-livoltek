@@ -5,7 +5,6 @@ from collections.abc import Callable
 import dataclasses
 from typing import Any
 
-from pylivoltek.models import DeviceDetails, Site
 from pylivoltek.api import DefaultApi
 
 from homeassistant.components.sensor import (
@@ -17,19 +16,13 @@ from homeassistant.components.sensor import (
 
 from homeassistant.const import (
     PERCENTAGE,
-    EntityCategory,
-    UnitOfElectricCurrent,
-    UnitOfElectricPotential,
     UnitOfPower,
-    UnitOfEnergy,
-    UnitOfTemperature,
 )
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .helper import async_get_api_client
 from .const import DOMAIN, CONF_SITE_ID
 from . import LivoltekInverterDevice, LivoltekDataUpdateCoordinator
 from .entity import LivoltekEntity

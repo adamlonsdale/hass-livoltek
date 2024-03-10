@@ -1,4 +1,5 @@
 """Livoltek API Helpers."""
+
 from __future__ import annotations
 import asyncio
 
@@ -10,34 +11,30 @@ from homeassistant.auth.jwt_wrapper import PyJWT
 
 from .const import (
     DOMAIN,
-    PLATFORMS,
     CONF_EMEA_ID,
     LIVOLTEK_EMEA_SERVER,
     LIVOLTEK_GLOBAL_SERVER,
     CONF_SECUID_ID,
     CONF_USERTOKEN_ID,
     CONF_SITE_ID,
-    DATA_ACCESS_TOKEN,
 )
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
-from pylivoltek.models import Site, CurrentPowerFlow, DeviceList, Device, DeviceDetails
-from pylivoltek.rest import ApiException
+from pylivoltek.models import Site, CurrentPowerFlow, DeviceList, DeviceDetails
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
-    ConfigEntryNotReady,
-    HomeAssistantError,
 )
 
 
 def validate_jwt(jwt: str) -> bool:
+    """Validate a JWT token."""
     try:
         PyJWT(jwt)
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 
