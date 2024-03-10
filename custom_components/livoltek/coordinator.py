@@ -65,4 +65,6 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
             self.config_entry.data[CONF_SITE_ID],
         )
 
+        self.site = site
+        self.devices = devices
         self.current_power_flow = current_power_flow[0].data
