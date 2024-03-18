@@ -21,7 +21,6 @@ from .helper import (
     async_get_site,
     async_get_cur_power_flow,
     async_get_device_list,
-    async_get_device_generation,
     async_get_recent_grid,
 )
 
