@@ -4,7 +4,8 @@
     "dockerFile": "./Dockerfile",
     "postCreateCommand": "scripts/setup",
     "containerEnv": {
-        "DEVCONTAINER": "1"
+        "DEVCONTAINER": "1",
+        "PYTHONPATH": "/usr/local/lib/python3.12/site-packages:/workspaces/hass-livoltek"
     },
     "appPort": [
         "8123:8123"

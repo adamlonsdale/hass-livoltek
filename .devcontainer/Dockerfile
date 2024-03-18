@@ -5,7 +5,7 @@ FROM python:${VARIANT}
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get purge -y imagemagick imagemagick-6-common
-RUN python3 -m pip install --upgrade setuptools build debugpy
+RUN python3 -m pip install --upgrade setuptools build debugpy pip
 RUN apt-get install -y cmake libavformat-dev gdb ffmpeg libpcap-dev jq
 
 EXPOSE 5678
