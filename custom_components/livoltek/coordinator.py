@@ -22,6 +22,7 @@ from .helper import (
     async_get_cur_power_flow,
     async_get_device_list,
     async_get_recent_grid,
+    async_get_recent_solar,
 )
 
 
@@ -42,6 +43,7 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.devices = CaseInsensitiveDict({})
         self.current_power_flow = None
         self.todays_grid = None
+        self.todays_solar = None
 
         super().__init__(hass, LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
@@ -75,10 +77,21 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
             self.config_entry.data[CONF_SITE_ID],
         )
 
+        recent_solar = await async_get_recent_solar(
+            api,
+            self.config_entry.data[CONF_USERTOKEN_ID],
+            self.config_entry.data[CONF_SITE_ID],
+        )
+
         for grid in recent_grid:
             ts = dt.date.fromtimestamp(int(grid["ts"]) / 1000)
             if ts == dt.date.today():
                 self.todays_grid = grid
+
+        for solar in recent_solar:
+            ts = dt.date.fromtimestamp(int(solar["ts"]) / 1000)
+            if ts == dt.date.today():
+                self.todays_solar = solar
 
         self.site = site
         self.devices = devices
