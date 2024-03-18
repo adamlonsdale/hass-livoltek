@@ -852,6 +852,10 @@ components:
         negative:
           type: double
           description: Grid Export
+    GridImportExportList:
+      type: array
+      items:
+        $ref: '#/components/schemas/GridImportExport'
     GridImportExportApiResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
@@ -860,4 +864,4 @@ components:
           - data
           properties:
             data:
-              $ref: '#/components/schemas/GridImportExport'
+              $ref: '#/components/schemas/GridImportExportList'
