@@ -4,4 +4,4 @@ boto3 ==1.34.0
 pip>=21.0,<23.2
 ruff==0.0.291
 urllib3==1.26.16
-pylivoltek==1.0.7
+pylivoltek==1.0.8

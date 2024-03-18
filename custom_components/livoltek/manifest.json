@@ -11,7 +11,7 @@
   "issue_tracker": "https://github.com/adamlonsdale/hass-livoltek/issues",
   "quality_scale": "platinum",
   "requirements": [
-    "pylivoltek==1.0.7"
+    "pylivoltek==1.0.8"
   ],
   "version": "0.0.1"
 }

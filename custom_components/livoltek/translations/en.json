@@ -49,6 +49,9 @@
             },
             "grid_import_energy": {
                 "name": "Grid Import Today"
+            },
+            "solar_generation_energy": {
+                "name": "Solar Generation Today"
             }
         }
     }

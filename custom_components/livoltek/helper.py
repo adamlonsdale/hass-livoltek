@@ -27,6 +27,7 @@ from pylivoltek.models import (
     DeviceList,
     DeviceDetails,
     GridImportExportList,
+    SolarGenerationtList,
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -151,6 +152,18 @@ async def async_get_recent_grid(
     )
     recent_grid = thread.get()
     return recent_grid[0]["data"]
+
+
+async def async_get_recent_solar(
+    api: DefaultApi, user_token: str, site_id: str
+) -> SolarGenerationtList:
+    """Get the Recent Solar Generation."""
+
+    thread = api.get_recent_solar_generated_energy_with_http_info(
+        user_token, site_id, async_req=True
+    )
+    recent_solar = thread.get()
+    return recent_solar[0]["data"]
 
 
 async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
