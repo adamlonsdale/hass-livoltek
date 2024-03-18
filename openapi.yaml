@@ -553,19 +553,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  code:
-                    type: string
-                    description: Message Code
-                  message:
-                    type: string
-                    description: HTTP/HTTPS response code
-                  data:
-                    type: array
-                    description: Energy Storage Overview
-                    items:
-                      $ref: '#/components/schemas/GridImportExportHistory'
+                $ref: '#/components/schemas/GridImportExportApiResponse'
         "201":
           description: Created
         "401":
@@ -581,6 +569,15 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: HTTP response code
+        message:
+          type: string
+          description: Message Code
     Site:
       type: object
       properties:
@@ -839,7 +836,7 @@ components:
         batteryType:
           type: string
           description: Battery Type
-    GridImportExportHistory:
+    GridImportExport:
       type: object
       properties:
         siteId:
@@ -855,3 +852,12 @@ components:
         negative:
           type: double
           description: Grid Export
+    GridImportExportApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          required:
+          - data
+          properties:
+            data:
+              $ref: '#/components/schemas/GridImportExport'
