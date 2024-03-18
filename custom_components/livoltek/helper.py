@@ -21,7 +21,13 @@ from .const import (
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
-from pylivoltek.models import Site, CurrentPowerFlow, DeviceList, DeviceDetails
+from pylivoltek.models import (
+    Site,
+    CurrentPowerFlow,
+    DeviceList,
+    DeviceDetails,
+    GridImportExportList,
+)
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from homeassistant.exceptions import (
@@ -62,9 +68,9 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     return loginResultObj["data"]
 
 
-async def async_get_api_client(entry: ConfigEntry, access_token: str = None) -> tuple(
-    DefaultApi, str
-):
+async def async_get_api_client(
+    entry: ConfigEntry, access_token: str = None
+) -> tuple[DefaultApi, str]:
     """Get the Livoltek API client."""
     config = Configuration()
 
@@ -86,7 +92,7 @@ async def async_get_api_client(entry: ConfigEntry, access_token: str = None) -> 
 
     api_client = ApiClient(config)
     api_client.set_default_header("Authorization", token)
-    return DefaultApi(api_client)
+    return DefaultApi(api_client), token
 
 
 async def async_get_site(api: DefaultApi, user_token: str, site_id: str) -> Site:
@@ -121,6 +127,30 @@ async def async_get_device_list(
     )
     device_list = thread.get()
     return device_list[0].data["list"]
+
+
+async def async_get_device_generation(
+    api: DefaultApi, user_token: str, device_id: str
+) -> DeviceList:
+    """Get the Livoltek API client."""
+
+    thread = api.hess_api_device_device_id_real_electricity_get_with_http_info(
+        user_token, device_id, async_req=True
+    )
+    device_generation = thread.get()
+    return device_generation[0]
+
+
+async def async_get_recent_grid(
+    api: DefaultApi, user_token: str, site_id: str
+) -> GridImportExportList:
+    """Get the Recent Grid Import/Export."""
+
+    thread = api.get_recent_energy_import_export_with_http_info(
+        user_token, site_id, async_req=True
+    )
+    recent_grid = thread.get()
+    return recent_grid[0]["data"]
 
 
 async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
