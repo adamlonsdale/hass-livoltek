@@ -4,11 +4,11 @@ logger:
   default: info
   logs:
     custom_components.livoltek: debug
-    urllib3: debug
-    pylivoltek: warn
+    urllib3: info
+    pylivoltek: info
     homeassistant.setup: error
     homeassistant.loader: error
-    homeassistant.components.sensor: debug
+    homeassistant.components.sensor: info
 
 http:
   use_x_forwarded_for: true
