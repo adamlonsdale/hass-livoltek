@@ -1,5 +1,5 @@
 -r requirements.txt
-aresponses==2.1.6
+aresponses==3.0.0
 asynctest==0.13.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
