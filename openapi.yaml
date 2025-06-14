@@ -519,6 +519,92 @@ paths:
           description: Forbidden
         "404":
           description: Not Found
+  /hess/api/site/{siteId}/reissueUtilityEnergy:
+    get:
+      operationId: GetRecentEnergyImportExport
+      summary: Get grid import/export history for the last 3 days.
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 10
+          description: Site ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GridImportExportApiResponse'
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+  /hess/api/site/{siteId}/reissueSolarEnergy:
+    get:
+      operationId: GetRecentSolarGeneratedEnergy
+      summary: Get solar generation history for the last 3 days.
+      parameters:
+        - name: userToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User token
+        - name: userType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2
+            enum:
+              - "0"
+              - "1"
+          description: User Type
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 10
+          description: Site ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolarGenerationApiResponse'
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
 components:
   securitySchemes:
     token:
@@ -526,6 +612,15 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: HTTP response code
+        message:
+          type: string
+          description: Message Code
     Site:
       type: object
       properties:
@@ -784,3 +879,58 @@ components:
         batteryType:
           type: string
           description: Battery Type
+    GridImportExport:
+      type: object
+      properties:
+        siteId:
+          type: string
+          description: Site ID
+        ts:
+          type: integer
+          format: int64
+          description: Timestamp
+        positive:
+          type: double
+          description: Grid Import
+        negative:
+          type: double
+          description: Grid Export
+    GridImportExportList:
+      type: array
+      items:
+        $ref: '#/components/schemas/GridImportExport'
+    GridImportExportApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          required:
+          - data
+          properties:
+            data:
+              $ref: '#/components/schemas/GridImportExportList'
+    SolarGeneration:
+      type: object
+      properties:
+        siteId:
+          type: string
+          description: Site ID
+        ts:
+          type: integer
+          format: int64
+          description: Timestamp
+        powerGeneration:
+          type: double
+          description: Power Generated
+    SolarGenerationtList:
+      type: array
+      items:
+        $ref: '#/components/schemas/SolarGeneration'
+    SolarGenerationApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          required:
+          - data
+          properties:
+            data:
+              $ref: '#/components/schemas/SolarGenerationList'

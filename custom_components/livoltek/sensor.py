@@ -14,10 +14,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfPower,
-)
+from homeassistant.const import PERCENTAGE, UnitOfPower, UnitOfEnergy
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -102,6 +99,38 @@ SENSORS = [
         enabled=lambda x: x.current_power_flow is not None,
         value_fn=lambda x: x.current_power_flow.energy_power
         if x.current_power_flow
+        else None,
+    ),
+    LivoltekSensorEntityDescription(
+        key="grid_import_energy",
+        translation_key="grid_import_energy",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=1,
+        enabled=lambda x: x.todays_grid["positive"] is not None,
+        value_fn=lambda x: float(x.todays_grid["positive"]) if x.todays_grid else None,
+    ),
+    LivoltekSensorEntityDescription(
+        key="grid_export_energy",
+        translation_key="grid_export_energy",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=1,
+        enabled=lambda x: x.todays_grid["negative"] is not None,
+        value_fn=lambda x: float(x.todays_grid["negative"]) if x.todays_grid else None,
+    ),
+    LivoltekSensorEntityDescription(
+        key="solar_generation_energy",
+        translation_key="solar_generation_energy",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=1,
+        enabled=lambda x: x.todays_solar["powerGeneration"] is not None,
+        value_fn=lambda x: float(x.todays_solar["powerGeneration"])
+        if x.todays_solar
         else None,
     ),
 ]
