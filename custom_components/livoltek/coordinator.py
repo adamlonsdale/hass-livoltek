@@ -96,3 +96,4 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.site = site
         self.devices = devices
         self.current_power_flow = current_power_flow[0].data
+        LOGGER.debug("Current Power Flow: %s", current_power_flow[0].data)
