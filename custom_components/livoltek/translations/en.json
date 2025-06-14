@@ -30,19 +30,28 @@
     "entity": {
         "sensor": {
             "energy_power": {
-                "name": "Battery Power"
+                "name": "Current Battery Power"
             },
             "load_power": {
-                "name": "Load Consumption"
+                "name": "Current Load Consumption"
             },
             "pv_power": {
-                "name": "Solar Generation Power"
+                "name": "Current Solar Generation"
             },
             "power_grid_power": {
-                "name": "Grid Import Power"
+                "name": "Current Grid Import"
             },
             "battery_soc": {
                 "name": "Battery SoC"
+            },
+            "grid_export_energy": {
+                "name": "Grid Export Today"
+            },
+            "grid_import_energy": {
+                "name": "Grid Import Today"
+            },
+            "solar_generation_energy": {
+                "name": "Solar Generation Today"
             }
         }
     }

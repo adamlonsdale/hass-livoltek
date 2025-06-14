@@ -9,9 +9,8 @@
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/adamlonsdale/hass-livoltek/issues",
-  "quality_scale": "platinum",
   "requirements": [
-    "pylivoltek==1.0.0"
+    "pylivoltek==1.0.9"
   ],
   "version": "0.0.1"
 }
