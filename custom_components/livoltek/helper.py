@@ -29,7 +29,7 @@ from pylivoltek.models import (
     DeviceList,
     DeviceDetails,
     GridImportExportList,
-    SolarGenerationtList,
+    SolarGenerationList,
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -164,7 +164,7 @@ async def async_get_recent_grid(
 
 async def async_get_recent_solar(
     api: DefaultApi, user_token: str, site_id: str
-) -> SolarGenerationtList:
+) -> SolarGenerationList:
     """Get the Recent Solar Generation."""
 
     thread = api.get_recent_solar_generated_energy_with_http_info(
