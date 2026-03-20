@@ -177,7 +177,7 @@ async def async_get_recent_solar(
 async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
     """Update Livoltek devices."""
 
-    api = await async_get_api_client(entry)
+    api, _ = await async_get_api_client(entry)
     user_token = str(entry.data[CONF_USERTOKEN_ID])
     site_id = str(entry.data[CONF_SITE_ID])
 

@@ -35,7 +35,6 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the Livoltek coordinator."""
-        self.config_entry = entry
         self.livoltek = any
         self.hass = hass
 
@@ -46,6 +45,7 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.todays_solar = None
 
         super().__init__(hass, LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
+        self.config_entry = entry
 
     async def _async_update_data(self):
         """Fetch system status from Livoltek."""
