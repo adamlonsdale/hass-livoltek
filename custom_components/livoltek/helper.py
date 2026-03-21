@@ -60,16 +60,19 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     model = ApiLoginBody(secuid, api_key)
     api = DefaultApi(api_client)
 
-    thread = api.hess_api_login_post_with_http_info(
+    thread = api.hess_api_login_post(
         model, async_req=True, _preload_content=True
     )
     threadResult = thread.get()
-    loginResultObj = threadResult[0].data
 
-    if not threadResult[0].message == "SUCCESS":
-        raise ConfigEntryAuthFailed(threadResult[0].message)
+    if threadResult.message != "SUCCESS":
+        raise ConfigEntryAuthFailed(threadResult.message)
 
-    return loginResultObj["data"]
+    login_result = threadResult.data
+    if isinstance(login_result, dict):
+        return login_result.get("data", "")
+
+    return getattr(login_result, "data", "") or ""
 
 
 async def async_get_api_client(

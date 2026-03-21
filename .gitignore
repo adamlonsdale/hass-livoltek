@@ -10,9 +10,10 @@ __pycache__
 # misc
 .coverage
 coverage.xml
+.env
 
 /out
-
+venv/
 
 # Home Assistant configuration
 config/*
