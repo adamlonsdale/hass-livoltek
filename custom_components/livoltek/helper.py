@@ -1,41 +1,28 @@
 """Livoltek API Helpers."""
 
 from __future__ import annotations
+
 import asyncio
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import device_registry as dr
 from homeassistant.auth.jwt_wrapper import PyJWT
-
-from .const import (
-    DOMAIN,
-    CONF_EMEA_ID,
-    LIVOLTEK_EMEA_SERVER,
-    LIVOLTEK_GLOBAL_SERVER,
-    CONF_SECUID_ID,
-    CONF_USERTOKEN_ID,
-    CONF_SITE_ID,
-    LOGGER,
-)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_API_KEY
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
+from pylivoltek.models import (CurrentPowerFlow, DeviceDetails,
+                               DeviceEnergySummary, DeviceList,
+                               GridImportExportList, SiteOverview,
+                               SolarGenerationList)
 from pylivoltek.rest import ApiException
-from pylivoltek.models import (
-    Site,
-    CurrentPowerFlow,
-    DeviceList,
-    DeviceDetails,
-    GridImportExportList,
-    SolarGenerationList,
-)
-from homeassistant.helpers.device_registry import DeviceInfo
 
-from homeassistant.exceptions import (
-    ConfigEntryAuthFailed,
-)
+from .const import (CONF_EMEA_ID, CONF_SECUID_ID, CONF_SITE_ID,
+                    CONF_USERTOKEN_ID, DOMAIN, LIVOLTEK_EMEA_SERVER,
+                    LIVOLTEK_GLOBAL_SERVER, LOGGER)
 
 
 def validate_jwt(jwt: str) -> bool:
@@ -51,7 +38,10 @@ def validate_jwt(jwt: str) -> bool:
 async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     """Get the login token for the Livoltek API."""
     config = Configuration()
+    
     config.host = host
+    
+    print(host)
 
     api_key = api_key.replace("\\r", "\r")
     api_key = api_key.replace("\\n", "\n")
@@ -60,15 +50,18 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     model = ApiLoginBody(secuid, api_key)
     api = DefaultApi(api_client)
 
-    thread = api.hess_api_login_post(
+    thread = api.login(
         model, async_req=True, _preload_content=True
     )
-    threadResult = thread.get()
+    thread_result = thread.get()
 
-    if threadResult.message != "SUCCESS":
-        raise ConfigEntryAuthFailed(threadResult.message)
+    if thread_result.message != "SUCCESS":
+        raise ConfigEntryAuthFailed(thread_result.message)
 
-    login_result = threadResult.data
+    login_result = thread_result.data
+    
+    print (login_result)
+    
     if isinstance(login_result, dict):
         return login_result.get("data", "")
 
@@ -105,14 +98,13 @@ async def async_get_api_client(
     return DefaultApi(api_client), token
 
 
-async def async_get_site(api: DefaultApi, user_token: str, site_id: str) -> Site:
+async def async_get_site(
+    api: DefaultApi, user_token: str, site_id: str
+) -> SiteOverview:
     """Get the Livoltek API client."""
-
-    thread = api.hess_api_site_site_id_overview_get_with_http_info(
-        user_token, site_id, async_req=True
-    )
+    thread = api.get_site_generation_overview(user_token, site_id, async_req=True)
     site = thread.get()
-    return site
+    return site.data
 
 
 async def async_get_cur_power_flow(
@@ -120,11 +112,9 @@ async def async_get_cur_power_flow(
 ) -> CurrentPowerFlow:
     """Get the Livoltek API client."""
     try:
-        thread = api.hess_api_site_site_id_cur_powerflow_get_with_http_info(
-            user_token, site_id, async_req=True
-        )
+        thread = api.get_current_power_flow(user_token, site_id, async_req=True)
         current_power_flow = thread.get()
-        return current_power_flow
+        return current_power_flow.data
     except ApiException as e:
         LOGGER.error("Error getting current power flow: %s", e)
 
@@ -133,48 +123,38 @@ async def async_get_device_list(
     api: DefaultApi, user_token: str, site_id: str
 ) -> DeviceList:
     """Get the Livoltek API client."""
-
-    thread = api.hess_api_device_site_id_list_get_with_http_info(
-        user_token, site_id, 1, 10, async_req=True
-    )
+    thread = api.list_devices(user_token, site_id, 1, 10, async_req=True)
     device_list = thread.get()
-    return device_list[0].data["list"]
+    return device_list.data.list
 
 
 async def async_get_device_generation(
     api: DefaultApi, user_token: str, device_id: str
-) -> DeviceList:
+) -> DeviceEnergySummary:
     """Get the Livoltek API client."""
-
-    thread = api.hess_api_device_device_id_real_electricity_get_with_http_info(
+    thread = api.get_device_generation_or_consumption(
         user_token, device_id, async_req=True
     )
     device_generation = thread.get()
-    return device_generation[0]
+    return device_generation.data
 
 
 async def async_get_recent_grid(
     api: DefaultApi, user_token: str, site_id: str
 ) -> GridImportExportList:
     """Get the Recent Grid Import/Export."""
-
-    thread = api.get_recent_energy_import_export_with_http_info(
-        user_token, site_id, async_req=True
-    )
+    thread = api.get_recent_energy_import_export(user_token, site_id, async_req=True)
     recent_grid = thread.get()
-    return recent_grid[0]["data"]
+    return recent_grid.data
 
 
 async def async_get_recent_solar(
     api: DefaultApi, user_token: str, site_id: str
 ) -> SolarGenerationList:
     """Get the Recent Solar Generation."""
-
-    thread = api.get_recent_solar_generated_energy_with_http_info(
-        user_token, site_id, async_req=True
-    )
+    thread = api.get_recent_solar_generated_energy(user_token, site_id, async_req=True)
     recent_solar = thread.get()
-    return recent_solar[0]["data"]
+    return recent_solar.data
 
 
 async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
