@@ -8,9 +8,6 @@ import pytest
 from homeassistant.const import CONF_API_KEY
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
-from pylivoltek import ApiClient, ApiLoginBody, Configuration
-from pylivoltek.api import DefaultApi
-
 from custom_components.livoltek.config_flow import LivoltekFlowHandler
 from custom_components.livoltek.const import (
     CONF_EMEA_ID,
@@ -18,8 +15,6 @@ from custom_components.livoltek.const import (
     CONF_SITE_ID,
     CONF_USERTOKEN_ID,
     DOMAIN,
-    LIVOLTEK_EMEA_SERVER,
-    LIVOLTEK_GLOBAL_SERVER,
 )
 
 
@@ -102,27 +97,3 @@ def test_get_site_list_returns_selector_options() -> None:
         {"value": "site-1", "label": "House"},
         {"value": "site-2", "label": "Garage"},
     ]
-
-
-@pytest.mark.asyncio
-@pytest.mark.live
-async def test_live_credentials_can_authenticate(
-    livoltek_live_credentials,
-) -> None:
-    """Opt-in smoke test against the real Livoltek login endpoint."""
-    host = (
-        LIVOLTEK_EMEA_SERVER
-        if livoltek_live_credentials.emea
-        else LIVOLTEK_GLOBAL_SERVER
-    )
-
-    config = Configuration()
-    config.host = host
-    api = DefaultApi(ApiClient(config))
-    model = ApiLoginBody(
-        livoltek_live_credentials.secuid,
-        livoltek_live_credentials.api_key,
-    )
-    response = api.login(model, async_req=True, _preload_content=True).get()
-
-    assert response.message == "SUCCESS"

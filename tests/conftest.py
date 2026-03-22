@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 from types import MappingProxyType
+from typing import Any
 
 import pytest
 
@@ -14,6 +15,15 @@ from homeassistant import config_entries, loader
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
+
+from pylivoltek import ApiClient, ApiLoginBody, Configuration
+from pylivoltek.api import DefaultApi
+from pylivoltek.rest import ApiException
+
+from custom_components.livoltek.const import (
+    LIVOLTEK_EMEA_SERVER,
+    LIVOLTEK_GLOBAL_SERVER,
+)
 
 
 DOMAIN = "livoltek"
@@ -46,7 +56,6 @@ def _load_dotenv() -> None:
 
         os.environ.setdefault(key, value)
 
-
 _load_dotenv()
 
 
@@ -57,12 +66,79 @@ class LiveCredentials:
     api_key: str
     emea: bool
     secuid: str
+    user_tokens: tuple[str, ...]
+
+    @property
+    def user_token(self) -> str:
+        """Return the primary configured user token."""
+        return self.user_tokens[0]
+
+
+@dataclass(frozen=True)
+class LiveApiContext:
+    """Shared live API state for the smoke suite."""
+
+    access_token: str
+    api: DefaultApi
+    device: dict[str, Any]
+    device_id: str
+    host: str
+    serial_number: str
+    site: dict[str, Any]
+    site_id: str
     user_token: str
 
 
 def _env_truthy(name: str) -> bool:
     """Return whether an environment variable should be treated as true."""
     return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _collect_live_user_tokens() -> tuple[str, ...]:
+    """Return every configured live user token from the local environment."""
+    token_names = [
+        name
+        for name in os.environ
+        if name == "LIVOLTEK_TEST_USER_TOKEN"
+        or name.startswith("LIVOLTEK_TEST_USER_TOKEN_")
+        or name in {"LIVOLTEK_TEST_OTHER_USER_TOKEN", "LIVOLTEK_TEST_SECOND_USER_TOKEN"}
+    ]
+
+    ordered_names = sorted(
+        token_names,
+        key=lambda name: (name != "LIVOLTEK_TEST_USER_TOKEN", name),
+    )
+
+    seen: set[str] = set()
+    user_tokens: list[str] = []
+    for name in ordered_names:
+        value = os.getenv(name, "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        user_tokens.append(value)
+
+    return tuple(user_tokens)
+
+
+def _to_live_payload(response: Any) -> dict[str, Any]:
+    """Normalise live API responses into plain dictionaries."""
+    if hasattr(response, "to_dict"):
+        return response.to_dict()
+    return response
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Print a one-line result for each completed test to stdout."""
+    is_terminal_phase = report.when == "call"
+    is_setup_skip_or_fail = report.when == "setup" and report.outcome in {
+        "failed",
+        "skipped",
+    }
+    if not (is_terminal_phase or is_setup_skip_or_fail):
+        return
+
+    print(f"{report.outcome.upper()}: {report.nodeid}")
 
 
 @pytest.fixture
@@ -114,17 +190,19 @@ def livoltek_live_credentials() -> LiveCredentials:
     """Return live credentials from the local environment when configured."""
     api_key = os.getenv("LIVOLTEK_TEST_API_KEY")
     secuid = os.getenv("LIVOLTEK_TEST_SECUID")
-    user_token = os.getenv("LIVOLTEK_TEST_USER_TOKEN")
+    user_tokens = _collect_live_user_tokens()
 
     missing = [
         name
         for name, value in (
             ("LIVOLTEK_TEST_API_KEY", api_key),
             ("LIVOLTEK_TEST_SECUID", secuid),
-            ("LIVOLTEK_TEST_USER_TOKEN", user_token),
         )
         if not value
     ]
+    if not user_tokens:
+        missing.append("LIVOLTEK_TEST_USER_TOKEN")
+
     if missing:
         pytest.skip(
             "Live Livoltek API test requires local environment variables: "
@@ -135,5 +213,106 @@ def livoltek_live_credentials() -> LiveCredentials:
         api_key=api_key,
         emea=_env_truthy("LIVOLTEK_TEST_EMEA"),
         secuid=secuid,
-        user_token=user_token,
+        user_tokens=user_tokens,
+    )
+
+
+@pytest.fixture(scope="session")
+def livoltek_live_api_context(
+    livoltek_live_credentials: LiveCredentials,
+) -> LiveApiContext:
+    """Authenticate once and return a reusable live API context."""
+    host = (
+        LIVOLTEK_EMEA_SERVER
+        if livoltek_live_credentials.emea
+        else LIVOLTEK_GLOBAL_SERVER
+    )
+    config = Configuration()
+    config.host = host
+
+    login_api = DefaultApi(ApiClient(config))
+    login_model = ApiLoginBody(
+        livoltek_live_credentials.secuid,
+        livoltek_live_credentials.api_key.replace("\\r", "\r").replace("\\n", "\n"),
+    )
+    login_response = login_api.login(
+        login_model,
+        async_req=True,
+        _preload_content=True,
+    ).get()
+    login_payload = _to_live_payload(login_response)
+
+    assert login_payload["message"] == "SUCCESS"
+    access_token = login_payload["data"]["data"]
+    assert access_token
+
+    api_client = ApiClient(config)
+    api_client.set_default_header("Authorization", access_token)
+    api = DefaultApi(api_client)
+
+    last_error: Exception | None = None
+    for user_token in livoltek_live_credentials.user_tokens:
+        try:
+            sites_payload = _to_live_payload(
+                api.list_sites(
+                    user_token,
+                    page=1,
+                    size=10,
+                    async_req=True,
+                    _preload_content=True,
+                ).get()
+            )
+            if sites_payload.get("message") != "SUCCESS":
+                continue
+
+            sites = sites_payload["data"]["list"]
+            if not sites:
+                continue
+
+            site = sites[0]
+            site_id = str(site["powerStationId"])
+            devices_payload = _to_live_payload(
+                api.list_devices(
+                    user_token,
+                    site_id,
+                    page=1,
+                    size=10,
+                    async_req=True,
+                    _preload_content=True,
+                ).get()
+            )
+            if devices_payload.get("message") != "SUCCESS":
+                continue
+
+            devices = devices_payload["data"]["list"]
+            if not devices:
+                continue
+
+            device = devices[0]
+            context = LiveApiContext(
+                access_token=access_token,
+                api=api,
+                device=device,
+                device_id=str(device["id"]),
+                host=host,
+                serial_number=str(device["inverterSn"]),
+                site=site,
+                site_id=site_id,
+                user_token=user_token,
+            )
+            yield context
+            pool = getattr(api.api_client, "pool", None)
+            if pool is not None:
+                pool.close()
+                pool.join()
+            return
+        except ApiException as err:
+            last_error = err
+
+    if last_error is not None:
+        raise last_error
+
+    pytest.skip(
+        "Live Livoltek API smoke tests require at least one configured user token "
+        "that can list both sites and devices."
     )
