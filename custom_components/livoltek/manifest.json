@@ -10,7 +10,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/adamlonsdale/hass-livoltek/issues",
   "requirements": [
-    "pylivoltek @ file:///Users/adam/projects/pylivoltek/pylivoltek/dist/pylivoltek-1.0.9-py3-none-any.whl"
+    "pylivoltek @ file:///Users/adam/projects/pylivoltek/pylivoltek/dist/pylivoltek-1.0.10-py3-none-any.whl"
   ],
   "version": "0.0.1"
 }

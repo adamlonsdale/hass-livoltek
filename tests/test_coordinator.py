@@ -39,7 +39,7 @@ async def test_async_update_data_populates_coordinator_state(
     )
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_cur_power_flow",
-        AsyncMock(return_value=[SimpleNamespace(data=power_flow)]),
+        AsyncMock(return_value=power_flow),
     )
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_recent_grid",
@@ -122,7 +122,7 @@ async def test_async_update_data_reuses_cached_access_token(
     )
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_cur_power_flow",
-        AsyncMock(return_value=[SimpleNamespace(data=power_flow)]),
+        AsyncMock(return_value=power_flow),
     )
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_recent_grid",
