@@ -82,15 +82,21 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         api_client.set_default_header("Authorization", access_token)
         api = DefaultApi(api_client)
 
-        thread = api.list_sites(
+        thread = api.hess_api_user_sites_list_get_with_http_info(
             user_token, size=10, page=1, async_req=True, _preload_content=True
         )
         user_sites = thread.get()
 
-        if user_sites is None or user_sites.data is None:
+        if not user_sites:
+            LOGGER.warning("Livoltek API returned empty response for sites list")
             return []
 
-        return user_sites.data.list or []
+        first_result = user_sites[0]
+        if first_result is None or first_result.data is None:
+            LOGGER.warning("Livoltek API returned empty site data")
+            return []
+
+        return first_result.data.list or []
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
