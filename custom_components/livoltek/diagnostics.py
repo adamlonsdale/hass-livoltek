@@ -22,7 +22,7 @@ async def async_get_config_entry_diagnostics(
 
     try:
         data: dict[str, Any] = json.loads(coordinator.data.json())
-    except AttributeError:
+    except (AttributeError, json.JSONDecodeError):
         return {}
 
     return data
