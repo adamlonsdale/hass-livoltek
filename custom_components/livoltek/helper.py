@@ -218,9 +218,10 @@ async def async_register_devices(
     device_registry = dr.async_get(hass)
 
     for device in device_list:
+        inverter_sn = device["inverterSn"]
         async with asyncio.timeout(10):
             dev = await hass.async_add_executor_job(
-                lambda sn=device["inverterSn"]: api.get_device_details(
+                lambda sn=inverter_sn: api.get_device_details(
                     user_token,
                     site_id,
                     sn,
