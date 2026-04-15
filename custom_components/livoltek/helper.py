@@ -50,10 +50,14 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     model = ApiLoginBody(secuid, api_key)
     api = DefaultApi(api_client)
 
-    thread = api.login(
-        model, async_req=True, _preload_content=True
+    loop = asyncio.get_running_loop()
+    threadResult = await loop.run_in_executor(
+        None,
+        lambda: api.hess_api_login_post_with_http_info(model, _preload_content=True),
     )
-    thread_result = thread.get()
+    loginResultObj = threadResult[0].data
+    if threadResult[0].message != "SUCCESS":
+        raise ConfigEntryAuthFailed(threadResult[0].message)
 
     if thread_result.message != "SUCCESS":
         raise ConfigEntryAuthFailed(thread_result.message)
@@ -102,9 +106,15 @@ async def async_get_site(
     api: DefaultApi, user_token: str, site_id: str
 ) -> SiteOverview:
     """Get the Livoltek API client."""
-    thread = api.get_site_generation_overview(user_token, site_id, async_req=True)
-    site = thread.get()
-    return site.data
+
+    loop = asyncio.get_running_loop()
+    site = await loop.run_in_executor(
+        None,
+        lambda: api.hess_api_site_site_id_overview_get_with_http_info(
+            user_token, site_id
+        ),
+    )
+    return site[0].data
 
 
 async def async_get_cur_power_flow(
@@ -112,9 +122,14 @@ async def async_get_cur_power_flow(
 ) -> CurrentPowerFlow:
     """Get the Livoltek API client."""
     try:
-        thread = api.get_current_power_flow(user_token, site_id, async_req=True)
-        current_power_flow = thread.get()
-        return current_power_flow.data
+        loop = asyncio.get_running_loop()
+        current_power_flow = await loop.run_in_executor(
+            None,
+            lambda: api.hess_api_site_site_id_cur_powerflow_get_with_http_info(
+                user_token, site_id
+            ),
+        )
+        return current_power_flow[0].data
     except ApiException as e:
         LOGGER.error("Error getting current power flow: %s", e)
 
@@ -123,38 +138,60 @@ async def async_get_device_list(
     api: DefaultApi, user_token: str, site_id: str
 ) -> DeviceList:
     """Get the Livoltek API client."""
-    thread = api.list_devices(user_token, site_id, 1, 10, async_req=True)
-    device_list = thread.get()
-    return device_list.data.list
+
+    loop = asyncio.get_running_loop()
+    device_list = await loop.run_in_executor(
+        None,
+        lambda: api.hess_api_device_site_id_list_get_with_http_info(
+            user_token, site_id, 1, 10
+        ),
+    )
+    return device_list[0].data["list"]
 
 
 async def async_get_device_generation(
     api: DefaultApi, user_token: str, device_id: str
 ) -> DeviceEnergySummary:
     """Get the Livoltek API client."""
-    thread = api.get_device_generation_or_consumption(
-        user_token, device_id, async_req=True
+
+    loop = asyncio.get_running_loop()
+    device_generation = await loop.run_in_executor(
+        None,
+        lambda: api.hess_api_device_device_id_real_electricity_get_with_http_info(
+            user_token, device_id
+        ),
     )
-    device_generation = thread.get()
-    return device_generation.data
+    return device_generation[0].data
 
 
 async def async_get_recent_grid(
     api: DefaultApi, user_token: str, site_id: str
 ) -> GridImportExportList:
     """Get the Recent Grid Import/Export."""
-    thread = api.get_recent_energy_import_export(user_token, site_id, async_req=True)
-    recent_grid = thread.get()
-    return recent_grid.data
+
+    loop = asyncio.get_running_loop()
+    recent_grid = await loop.run_in_executor(
+        None,
+        lambda: api.get_recent_energy_import_export_with_http_info(
+            user_token, site_id
+        ),
+    )
+    return recent_grid[0]["data"]
 
 
 async def async_get_recent_solar(
     api: DefaultApi, user_token: str, site_id: str
 ) -> SolarGenerationList:
     """Get the Recent Solar Generation."""
-    thread = api.get_recent_solar_generated_energy(user_token, site_id, async_req=True)
-    recent_solar = thread.get()
-    return recent_solar.data
+
+    loop = asyncio.get_running_loop()
+    recent_solar = await loop.run_in_executor(
+        None,
+        lambda: api.get_recent_solar_generated_energy_with_http_info(
+            user_token, site_id
+        ),
+    )
+    return recent_solar[0]["data"]
 
 
 async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
@@ -182,15 +219,16 @@ async def async_register_devices(
     device_registry = dr.async_get(hass)
 
     for device in device_list:
+        inverter_sn = device["inverterSn"]
         async with asyncio.timeout(10):
-            thread = api.get_device_details(
-                user_token,
-                site_id,
-                device["inverterSn"],
-                async_req=True,
-                _preload_content=True,
+            dev = await hass.async_add_executor_job(
+                lambda sn=inverter_sn: api.get_device_details(
+                    user_token,
+                    site_id,
+                    sn,
+                    _preload_content=True,
+                ).data
             )
-            dev = thread.get().data
 
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,

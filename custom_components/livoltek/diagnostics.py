@@ -16,6 +16,13 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator: LivoltekDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    # Round-trip via JSON to trigger serialization
-    data: dict[str, Any] = json.loads(coordinator.data.json())
+
+    if coordinator.data is None:
+        return {}
+
+    try:
+        data: dict[str, Any] = json.loads(coordinator.data.json())
+    except (AttributeError, json.JSONDecodeError):
+        return {}
+
     return data

@@ -1,6 +1,7 @@
 """Config flow to configure the Livoltek integration."""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 from typing import Any
 
@@ -59,6 +60,7 @@ async def validate_input(secuid: str, api_key: str, emea: bool) -> str:
 
     return token
 
+
 class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for Livoltek."""
 
@@ -81,11 +83,33 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         api_client.set_default_header("Authorization", access_token)
         api = DefaultApi(api_client)
 
-        thread = api.list_sites(
-            user_token, size=10, page=1, async_req=True, _preload_content=True
+        loop = asyncio.get_running_loop()
+        user_sites = await loop.run_in_executor(
+            None,
+            lambda: api.list_sites(
+                user_token, size=10, page=1, _preload_content=True
+            ),
         )
-        user_sites = thread.get()
-        return user_sites.data.list
+        if not user_sites:
+            LOGGER.warning("Livoltek API returned empty response for sites list")
+            return []
+        first_result = user_sites[0]
+        if first_result is None or first_result.data is None:
+            LOGGER.warning("Livoltek API returned empty site data")
+            return []
+
+        return first_result.data.list or []
+
+        if not user_sites:
+            LOGGER.warning("Livoltek API returned empty response for sites list")
+            return []
+
+        first_result = user_sites[0]
+        if first_result is None or first_result.data is None:
+            LOGGER.warning("Livoltek API returned empty site data")
+            return []
+
+        return first_result.data.list or []
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
