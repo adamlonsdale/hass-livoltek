@@ -1,7 +1,7 @@
 boto3 ==1.34.117
 colorlog==6.10.1
 homeassistant==2024.12.0b3
+ruff==0.14.2
 pip>=21.0,<25.4
-ruff==0.0.291
 urllib3>=1.26.5,<3
 pylivoltek==1.0.9
