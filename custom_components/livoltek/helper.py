@@ -25,6 +25,7 @@ from pylivoltek.models import (
 from pylivoltek.rest import ApiException
 
 from .const import (
+    API_REQUEST_TIMEOUT,
     CONF_EMEA_ID,
     CONF_SECUID_ID,
     CONF_SITE_ID,
@@ -62,7 +63,11 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     loop = asyncio.get_running_loop()
     thread_result = await loop.run_in_executor(
         None,
-        lambda: api.hess_api_login_post_with_http_info(model, _preload_content=True),
+        lambda: api.hess_api_login_post_with_http_info(
+            model,
+            _preload_content=True,
+            _request_timeout=API_REQUEST_TIMEOUT,
+        ),
     )
     response = thread_result[0]
 
@@ -116,7 +121,9 @@ async def async_get_site(
     site = await loop.run_in_executor(
         None,
         lambda: api.hess_api_site_site_id_overview_get_with_http_info(
-            user_token, site_id
+            user_token,
+            site_id,
+            _request_timeout=API_REQUEST_TIMEOUT,
         ),
     )
     return site[0].data
@@ -131,7 +138,9 @@ async def async_get_cur_power_flow(
         current_power_flow = await loop.run_in_executor(
             None,
             lambda: api.hess_api_site_site_id_cur_powerflow_get_with_http_info(
-                user_token, site_id
+                user_token,
+                site_id,
+                _request_timeout=API_REQUEST_TIMEOUT,
             ),
         )
         return current_power_flow[0].data
@@ -148,7 +157,11 @@ async def async_get_device_list(
     device_list = await loop.run_in_executor(
         None,
         lambda: api.hess_api_device_site_id_list_get_with_http_info(
-            user_token, site_id, 1, 10
+            user_token,
+            site_id,
+            1,
+            10,
+            _request_timeout=API_REQUEST_TIMEOUT,
         ),
     )
     return device_list[0].data["list"]
@@ -163,7 +176,9 @@ async def async_get_device_generation(
     device_generation = await loop.run_in_executor(
         None,
         lambda: api.hess_api_device_device_id_real_electricity_get_with_http_info(
-            user_token, device_id
+            user_token,
+            device_id,
+            _request_timeout=API_REQUEST_TIMEOUT,
         ),
     )
     return device_generation[0].data
@@ -178,7 +193,9 @@ async def async_get_recent_grid(
     recent_grid = await loop.run_in_executor(
         None,
         lambda: api.get_recent_energy_import_export_with_http_info(
-            user_token, site_id
+            user_token,
+            site_id,
+            _request_timeout=API_REQUEST_TIMEOUT,
         ),
     )
     return recent_grid[0]["data"]
@@ -193,7 +210,9 @@ async def async_get_recent_solar(
     recent_solar = await loop.run_in_executor(
         None,
         lambda: api.get_recent_solar_generated_energy_with_http_info(
-            user_token, site_id
+            user_token,
+            site_id,
+            _request_timeout=API_REQUEST_TIMEOUT,
         ),
     )
     return recent_solar[0]["data"]
@@ -206,7 +225,7 @@ async def async_update_devices(entry: ConfigEntry, hass: HomeAssistant) -> None:
     user_token = str(entry.data[CONF_USERTOKEN_ID])
     site_id = str(entry.data[CONF_SITE_ID])
 
-    async with asyncio.timeout(10):
+    async with asyncio.timeout(API_REQUEST_TIMEOUT):
         device_list = await async_get_device_list(api, user_token, site_id)
 
     await async_register_devices(api, entry, user_token, site_id, device_list, hass)
@@ -225,13 +244,14 @@ async def async_register_devices(
 
     for device in device_list:
         inverter_sn = device["inverterSn"]
-        async with asyncio.timeout(10):
+        async with asyncio.timeout(API_REQUEST_TIMEOUT):
             dev = await hass.async_add_executor_job(
                 lambda sn=inverter_sn: api.get_device_details(
                     user_token,
                     site_id,
                     sn,
                     _preload_content=True,
+                    _request_timeout=API_REQUEST_TIMEOUT,
                 ).data
             )
 
