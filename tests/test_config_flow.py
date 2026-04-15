@@ -1,6 +1,7 @@
 """Tests for the Livoltek config flow."""
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -13,6 +14,7 @@ from pylivoltek.api import DefaultApi
 
 from custom_components.livoltek.config_flow import LivoltekFlowHandler
 from custom_components.livoltek.const import (
+    API_REQUEST_TIMEOUT,
     CONF_EMEA_ID,
     CONF_SECUID_ID,
     CONF_SITE_ID,
@@ -102,6 +104,48 @@ def test_get_site_list_returns_selector_options() -> None:
         {"value": "site-1", "label": "House"},
         {"value": "site-2", "label": "Garage"},
     ]
+
+
+@pytest.mark.asyncio
+async def test_get_sites_sets_request_timeout(monkeypatch) -> None:
+    """Site listing should use the integration HTTP timeout."""
+
+    class FakeApiClient:
+        def __init__(self, config) -> None:
+            self.config = config
+            self.headers = {}
+
+        def set_default_header(self, name: str, value: str) -> None:
+            self.headers[name] = value
+
+    class FakeDefaultApi:
+        def __init__(self, api_client) -> None:
+            self.api_client = api_client
+
+        def list_sites(self, user_token, **kwargs):
+            assert user_token == "user-token"
+            assert kwargs["_preload_content"] is True
+            assert kwargs["_request_timeout"] == API_REQUEST_TIMEOUT
+            return [
+                SimpleNamespace(
+                    data=SimpleNamespace(
+                        list=[
+                            {
+                                "powerStationId": "site-123",
+                                "powerStationName": "Home",
+                            }
+                        ]
+                    )
+                )
+            ]
+
+    monkeypatch.setattr("custom_components.livoltek.config_flow.ApiClient", FakeApiClient)
+    monkeypatch.setattr("custom_components.livoltek.config_flow.DefaultApi", FakeDefaultApi)
+
+    flow = LivoltekFlowHandler()
+    sites = await flow.get_sites("https://example.com", "access-token", "user-token")
+
+    assert sites == [{"powerStationId": "site-123", "powerStationName": "Home"}]
 
 
 @pytest.mark.asyncio
