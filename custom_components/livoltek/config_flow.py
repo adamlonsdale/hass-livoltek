@@ -1,6 +1,7 @@
 """Config flow to configure the Livoltek integration."""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 from typing import Any
 
@@ -82,10 +83,13 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         api_client.set_default_header("Authorization", access_token)
         api = DefaultApi(api_client)
 
-        thread = api.hess_api_user_sites_list_get_with_http_info(
-            user_token, size=10, page=1, async_req=True, _preload_content=True
+        loop = asyncio.get_running_loop()
+        user_sites = await loop.run_in_executor(
+            None,
+            lambda: api.hess_api_user_sites_list_get_with_http_info(
+                user_token, size=10, page=1, _preload_content=True
+            ),
         )
-        user_sites = thread.get()
 
         if not user_sites:
             LOGGER.warning("Livoltek API returned empty response for sites list")
