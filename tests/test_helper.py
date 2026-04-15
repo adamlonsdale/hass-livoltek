@@ -18,7 +18,7 @@ from custom_components.livoltek.const import (
     LIVOLTEK_GLOBAL_SERVER,
 )
 
-from .common import build_device_details, make_thread
+from .common import build_device_details
 
 
 def test_validate_jwt_returns_true_for_decodable_token(monkeypatch) -> None:
@@ -116,6 +116,35 @@ async def test_async_get_api_client_refreshes_invalid_token_on_emea(
 
 
 @pytest.mark.asyncio
+async def test_async_get_login_token_sets_request_timeout(monkeypatch) -> None:
+    """Login requests should use the integration HTTP timeout."""
+
+    class FakeApiClient:
+        def __init__(self, config) -> None:
+            self.config = config
+
+    class FakeDefaultApi:
+        def __init__(self, api_client) -> None:
+            self.api_client = api_client
+
+        def hess_api_login_post_with_http_info(self, model, **kwargs):
+            assert kwargs["_preload_content"] is True
+            assert kwargs["_request_timeout"] == helper.API_REQUEST_TIMEOUT
+            return (SimpleNamespace(message="SUCCESS", data={"data": "token"}),)
+
+    monkeypatch.setattr(helper, "ApiClient", FakeApiClient)
+    monkeypatch.setattr(helper, "DefaultApi", FakeDefaultApi)
+
+    token = await helper.async_get_login_token(
+        LIVOLTEK_GLOBAL_SERVER,
+        "api-key",
+        "secuid-123",
+    )
+
+    assert token == "token"
+
+
+@pytest.mark.asyncio
 async def test_async_update_devices_unpacks_api_result_before_fetching_list(
     livoltek_entry,
     monkeypatch,
@@ -151,9 +180,11 @@ async def test_async_register_devices_creates_device_registry_entries(
 
     api = Mock()
     api.get_device_details.side_effect = [
-        make_thread(SimpleNamespace(data=build_device_details(id="device-1"))),
-        make_thread(SimpleNamespace(data=build_device_details(id="device-2"))),
+        SimpleNamespace(data=build_device_details(id="device-1")),
+        SimpleNamespace(data=build_device_details(id="device-2")),
     ]
+    hass = Mock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda job: job())
 
     await helper.async_register_devices(
         api=api,
@@ -161,13 +192,16 @@ async def test_async_register_devices_creates_device_registry_entries(
         user_token="user-token-123",
         site_id="site-123",
         device_list=[{"inverterSn": "INV-001"}, {"inverterSn": "INV-002"}],
-        hass=object(),
+        hass=hass,
     )
 
     assert registry.async_get_or_create.call_count == 2
     first_call = registry.async_get_or_create.call_args_list[0]
     assert first_call.kwargs["config_entry_id"] == livoltek_entry.entry_id
     assert first_call.kwargs["identifiers"] == {("livoltek", "device-1")}
+    assert api.get_device_details.call_args_list[0].kwargs["_request_timeout"] == (
+        helper.API_REQUEST_TIMEOUT
+    )
 
 
 @pytest.mark.asyncio

@@ -23,6 +23,7 @@ CONF_SITE_ID = "site_id"
 DATA_ACCESS_TOKEN = "access_token"
 
 DEFAULT_NAME = "Livoltek"
+API_REQUEST_TIMEOUT = 20
 
 LIVOLTEK_EMEA_SERVER = "https://api-eu.livoltek-portal.com:8081"
 LIVOLTEK_GLOBAL_SERVER = "https://api.livoltek-portal.com:8081"

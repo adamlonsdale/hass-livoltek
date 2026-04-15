@@ -29,6 +29,7 @@ from homeassistant.exceptions import (
 )
 
 from .const import (
+    API_REQUEST_TIMEOUT,
     CONF_SECUID_ID,
     CONF_EMEA_ID,
     CONF_SITE_ID,
@@ -87,7 +88,11 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         user_sites = await loop.run_in_executor(
             None,
             lambda: api.list_sites(
-                user_token, size=10, page=1, _preload_content=True
+                user_token,
+                size=10,
+                page=1,
+                _preload_content=True,
+                _request_timeout=API_REQUEST_TIMEOUT,
             ),
         )
         if not user_sites:
