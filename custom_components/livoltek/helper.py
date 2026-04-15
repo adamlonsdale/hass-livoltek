@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from homeassistant.auth.jwt_wrapper import PyJWT
 from homeassistant.config_entries import ConfigEntry
@@ -14,15 +15,25 @@ from homeassistant.helpers.device_registry import DeviceInfo
 
 from pylivoltek import ApiClient, ApiLoginBody, Configuration
 from pylivoltek.api import DefaultApi
-from pylivoltek.models import (CurrentPowerFlow, DeviceDetails,
-                               DeviceEnergySummary, DeviceList,
-                               GridImportExportList, SiteOverview,
-                               SolarGenerationList)
+from pylivoltek.models import (
+    CurrentPowerFlow,
+    DeviceDetails,
+    DeviceList,
+    GridImportExportList,
+    SiteOverview,
+)
 from pylivoltek.rest import ApiException
 
-from .const import (CONF_EMEA_ID, CONF_SECUID_ID, CONF_SITE_ID,
-                    CONF_USERTOKEN_ID, DOMAIN, LIVOLTEK_EMEA_SERVER,
-                    LIVOLTEK_GLOBAL_SERVER, LOGGER)
+from .const import (
+    CONF_EMEA_ID,
+    CONF_SECUID_ID,
+    CONF_SITE_ID,
+    CONF_USERTOKEN_ID,
+    DOMAIN,
+    LIVOLTEK_EMEA_SERVER,
+    LIVOLTEK_GLOBAL_SERVER,
+    LOGGER,
+)
 
 
 def validate_jwt(jwt: str) -> bool:
@@ -38,10 +49,8 @@ def validate_jwt(jwt: str) -> bool:
 async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     """Get the login token for the Livoltek API."""
     config = Configuration()
-    
+
     config.host = host
-    
-    print(host)
 
     api_key = api_key.replace("\\r", "\r")
     api_key = api_key.replace("\\n", "\n")
@@ -51,21 +60,17 @@ async def async_get_login_token(host: str, api_key: str, secuid: str) -> str:
     api = DefaultApi(api_client)
 
     loop = asyncio.get_running_loop()
-    threadResult = await loop.run_in_executor(
+    thread_result = await loop.run_in_executor(
         None,
         lambda: api.hess_api_login_post_with_http_info(model, _preload_content=True),
     )
-    loginResultObj = threadResult[0].data
-    if threadResult[0].message != "SUCCESS":
-        raise ConfigEntryAuthFailed(threadResult[0].message)
+    response = thread_result[0]
 
-    if thread_result.message != "SUCCESS":
-        raise ConfigEntryAuthFailed(thread_result.message)
+    if response.message != "SUCCESS":
+        raise ConfigEntryAuthFailed(response.message)
 
-    login_result = thread_result.data
-    
-    print (login_result)
-    
+    login_result = response.data
+
     if isinstance(login_result, dict):
         return login_result.get("data", "")
 
@@ -151,7 +156,7 @@ async def async_get_device_list(
 
 async def async_get_device_generation(
     api: DefaultApi, user_token: str, device_id: str
-) -> DeviceEnergySummary:
+) -> Any:
     """Get the Livoltek API client."""
 
     loop = asyncio.get_running_loop()
@@ -181,7 +186,7 @@ async def async_get_recent_grid(
 
 async def async_get_recent_solar(
     api: DefaultApi, user_token: str, site_id: str
-) -> SolarGenerationList:
+) -> Any:
     """Get the Recent Solar Generation."""
 
     loop = asyncio.get_running_loop()
