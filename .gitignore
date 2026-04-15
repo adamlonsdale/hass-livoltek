@@ -1,3 +1,9 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+.python-version
+
 # artifacts
 __pycache__
 .pytest*
