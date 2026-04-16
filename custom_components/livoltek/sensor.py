@@ -55,7 +55,7 @@ def _battery_soc(coordinator: Any) -> float | None:
     if ess is not None and ess.current_soc is not None:
         return ess.current_soc
     if coordinator.current_power_flow is not None:
-        return coordinator.current_power_flow.energy_soc
+        return _get_pf(x, "energy_soc", "energySoc")
     return None
 
 SENSORS = [
