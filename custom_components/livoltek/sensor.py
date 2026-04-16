@@ -18,6 +18,7 @@ from homeassistant.const import PERCENTAGE, UnitOfPower, UnitOfEnergy
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, CONF_SITE_ID
@@ -39,6 +40,14 @@ class LivoltekSensorEntityDescription(
 ):
     """Describes Livoltek sensor entity."""
 
+def _get_pf(coordinator, attr: str, json_key: str):
+    """Get a value from current_power_flow (works with dict or object)."""
+    pf = coordinator.current_power_flow
+    if pf is None:
+        return None
+    if isinstance(pf, dict):
+        return pf.get(json_key)
+    return getattr(pf, attr, None)
 
 def _battery_soc(coordinator: Any) -> float | None:
     """Return battery SOC, preferring the /ESS endpoint over /curPowerflow."""
@@ -46,9 +55,8 @@ def _battery_soc(coordinator: Any) -> float | None:
     if ess is not None and ess.current_soc is not None:
         return ess.current_soc
     if coordinator.current_power_flow is not None:
-        return coordinator.current_power_flow.energy_soc
+        return _get_pf(coordinator, "energy_soc", "energySoc")
     return None
-
 
 SENSORS = [
     LivoltekSensorEntityDescription(
@@ -69,9 +77,7 @@ SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         enabled=lambda x: x.current_power_flow is not None,
-        value_fn=lambda x: x.current_power_flow.power_grid_power
-        if x.current_power_flow
-        else None,
+        value_fn=lambda x: _get_pf(x, "power_grid_power", "powerGridPower"),
     ),
     LivoltekSensorEntityDescription(
         key="pv_power",
@@ -81,9 +87,7 @@ SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         enabled=lambda x: x.current_power_flow is not None,
-        value_fn=lambda x: x.current_power_flow.pv_power
-        if x.current_power_flow
-        else None,
+        value_fn=lambda x: _get_pf(x, "pv_power", "pvPower"),
     ),
     LivoltekSensorEntityDescription(
         key="load_power",
@@ -93,9 +97,7 @@ SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         enabled=lambda x: x.current_power_flow is not None,
-        value_fn=lambda x: x.current_power_flow.load_power
-        if x.current_power_flow
-        else None,
+        value_fn=lambda x: _get_pf(x, "load_power", "loadPower"),
     ),
     LivoltekSensorEntityDescription(
         key="energy_power",
@@ -105,9 +107,7 @@ SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         enabled=lambda x: x.current_power_flow is not None,
-        value_fn=lambda x: x.current_power_flow.energy_power
-        if x.current_power_flow
-        else None,
+        value_fn=lambda x: _get_pf(x, "energy_power", "energyPower"),
     ),
     LivoltekSensorEntityDescription(
         key="grid_import_energy",
@@ -209,6 +209,17 @@ class LivoltekValueSensor(LivoltekEntity, SensorEntity):
         self.coordinator = coordinator
         self.entity_description = description
         self._attr_unique_id = f"{site_id}-{description.key}"
+
+        site_name = "Livoltek"
+        if coordinator.site and hasattr(coordinator.site, "name") and coordinator.site.name:
+            site_name = coordinator.site.name
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, site_id)},
+            manufacturer="Livoltek",
+            name=site_name,
+            entry_type=None,
+        )
 
     @property
     def native_value(self) -> float | int | None:
