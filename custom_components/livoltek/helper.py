@@ -19,6 +19,7 @@ from pylivoltek.models import (
     CurrentPowerFlow,
     DeviceDetails,
     DeviceList,
+    EnergyStore,
     GridImportExportList,
     SiteOverview,
 )
@@ -165,6 +166,26 @@ async def async_get_device_list(
         ),
     )
     return device_list[0].data["list"]
+
+
+async def async_get_energy_storage(
+    api: DefaultApi, user_token: str, site_id: str
+) -> EnergyStore | None:
+    """Get energy storage information from the /ESS endpoint."""
+    try:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: api.get_energy_storage_with_http_info(
+                user_token,
+                site_id,
+                _request_timeout=API_REQUEST_TIMEOUT,
+            ),
+        )
+        return result[0].data
+    except ApiException as e:
+        LOGGER.warning("Failed to fetch energy storage data for site %s: %s", site_id, e)
+        return None
 
 
 async def async_get_device_generation(
