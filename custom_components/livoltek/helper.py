@@ -184,7 +184,7 @@ async def async_get_energy_storage(
         )
         return result[0].data
     except ApiException as e:
-        LOGGER.warning("Error getting energy storage data: %s", e)
+        LOGGER.warning("Failed to fetch energy storage data for site %s: %s", site_id, e)
         return None
 
 
