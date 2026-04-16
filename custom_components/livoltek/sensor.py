@@ -40,6 +40,16 @@ class LivoltekSensorEntityDescription(
     """Describes Livoltek sensor entity."""
 
 
+def _battery_soc(coordinator: Any) -> float | None:
+    """Return battery SOC, preferring the /ESS endpoint over /curPowerflow."""
+    ess = coordinator.energy_storage
+    if ess is not None and ess.current_soc is not None:
+        return ess.current_soc
+    if coordinator.current_power_flow is not None:
+        return coordinator.current_power_flow.energy_soc
+    return None
+
+
 SENSORS = [
     LivoltekSensorEntityDescription(
         key="battery_soc",
@@ -49,11 +59,7 @@ SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
         enabled=lambda x: x.energy_storage is not None or x.current_power_flow is not None,
-        value_fn=lambda x: (
-            x.energy_storage.current_soc
-            if x.energy_storage is not None and x.energy_storage.current_soc is not None
-            else (x.current_power_flow.energy_soc if x.current_power_flow else None)
-        ),
+        value_fn=_battery_soc,
     ),
     LivoltekSensorEntityDescription(
         key="power_grid_power",
