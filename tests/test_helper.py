@@ -218,3 +218,36 @@ async def test_async_get_hass_device_info_returns_expected_shape() -> None:
     assert result["identifiers"] == {("livoltek", "device-9")}
     assert result["name"] == "INV-009"
     assert result["sw_version"] == "2.0.1"
+
+
+@pytest.mark.asyncio
+async def test_async_get_energy_storage_returns_data_on_success() -> None:
+    """async_get_energy_storage should return the EnergyStore data on a successful call."""
+    ess_data = SimpleNamespace(current_soc=75.0, battery_sn="BAT-001")
+
+    api = Mock()
+    api.get_energy_storage_with_http_info.return_value = (
+        SimpleNamespace(data=ess_data),
+    )
+
+    result = await helper.async_get_energy_storage(api, "user-token", "site-123")
+
+    assert result is ess_data
+    call_kwargs = api.get_energy_storage_with_http_info.call_args.kwargs
+    assert call_kwargs["_request_timeout"] == helper.API_REQUEST_TIMEOUT
+
+
+@pytest.mark.asyncio
+async def test_async_get_energy_storage_returns_none_on_api_exception(
+    monkeypatch,
+) -> None:
+    """async_get_energy_storage should return None and log a warning when the API fails."""
+    from pylivoltek.rest import ApiException
+
+    api = Mock()
+    api.get_energy_storage_with_http_info.side_effect = ApiException(status=404)
+
+    result = await helper.async_get_energy_storage(api, "user-token", "site-123")
+
+    assert result is None
+

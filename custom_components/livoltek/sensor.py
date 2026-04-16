@@ -48,10 +48,12 @@ SENSORS = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        enabled=lambda x: x.current_power_flow is not None,
-        value_fn=lambda x: x.current_power_flow.energy_soc
-        if x.current_power_flow
-        else None,
+        enabled=lambda x: x.energy_storage is not None or x.current_power_flow is not None,
+        value_fn=lambda x: (
+            x.energy_storage.current_soc
+            if x.energy_storage is not None and x.energy_storage.current_soc is not None
+            else (x.current_power_flow.energy_soc if x.current_power_flow else None)
+        ),
     ),
     LivoltekSensorEntityDescription(
         key="power_grid_power",

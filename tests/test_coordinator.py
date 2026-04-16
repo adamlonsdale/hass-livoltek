@@ -8,7 +8,7 @@ import pytest
 
 from custom_components.livoltek.coordinator import LivoltekDataUpdateCoordinator
 
-from .common import build_power_flow, midday_timestamp_ms
+from .common import build_energy_storage, build_power_flow, midday_timestamp_ms
 
 
 @pytest.mark.asyncio
@@ -22,6 +22,7 @@ async def test_async_update_data_populates_coordinator_state(
     today = dt.date.today()
     yesterday = today - dt.timedelta(days=1)
     power_flow = build_power_flow()
+    energy_storage = build_energy_storage()
 
     get_api_client = AsyncMock(return_value=(object(), "access-token"))
     monkeypatch.setattr(
@@ -39,6 +40,10 @@ async def test_async_update_data_populates_coordinator_state(
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_cur_power_flow",
         AsyncMock(return_value=power_flow),
+    )
+    monkeypatch.setattr(
+        "custom_components.livoltek.coordinator.async_get_energy_storage",
+        AsyncMock(return_value=energy_storage),
     )
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_recent_grid",
@@ -79,6 +84,7 @@ async def test_async_update_data_populates_coordinator_state(
     assert coordinator.site == {"name": "Home Site"}
     assert coordinator.devices == {"device-1": {"name": "Inverter"}}
     assert coordinator.current_power_flow is power_flow
+    assert coordinator.energy_storage is energy_storage
     assert coordinator.todays_grid == {
         "ts": str(midday_timestamp_ms(today)),
         "positive": "4.6",
@@ -122,6 +128,10 @@ async def test_async_update_data_reuses_cached_access_token(
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_cur_power_flow",
         AsyncMock(return_value=power_flow),
+    )
+    monkeypatch.setattr(
+        "custom_components.livoltek.coordinator.async_get_energy_storage",
+        AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
         "custom_components.livoltek.coordinator.async_get_recent_grid",
