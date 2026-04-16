@@ -21,6 +21,7 @@ from .helper import (
     async_get_site,
     async_get_cur_power_flow,
     async_get_device_list,
+    async_get_energy_storage,
     async_get_recent_grid,
     async_get_recent_solar,
 )
@@ -41,6 +42,7 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.site = None
         self.devices = CaseInsensitiveDict({})
         self.current_power_flow = None
+        self.energy_storage = None
         self.todays_grid = None
         self.todays_solar = None
 
@@ -71,6 +73,12 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
             self.config_entry.data[CONF_SITE_ID],
         )
 
+        energy_storage = await async_get_energy_storage(
+            api,
+            self.config_entry.data[CONF_USERTOKEN_ID],
+            self.config_entry.data[CONF_SITE_ID],
+        )
+
         recent_grid = await async_get_recent_grid(
             api,
             self.config_entry.data[CONF_USERTOKEN_ID],
@@ -96,4 +104,5 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.site = site
         self.devices = devices
         self.current_power_flow = current_power_flow
+        self.energy_storage = energy_storage
         LOGGER.debug("Current Power Flow: %s", current_power_flow)

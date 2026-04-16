@@ -40,7 +40,6 @@ class LivoltekSensorEntityDescription(
 ):
     """Describes Livoltek sensor entity."""
 
-
 def _get_pf(coordinator, attr: str, json_key: str):
     """Get a value from current_power_flow (works with dict or object)."""
     pf = coordinator.current_power_flow
@@ -50,6 +49,14 @@ def _get_pf(coordinator, attr: str, json_key: str):
         return pf.get(json_key)
     return getattr(pf, attr, None)
 
+def _battery_soc(coordinator: Any) -> float | None:
+    """Return battery SOC, preferring the /ESS endpoint over /curPowerflow."""
+    ess = coordinator.energy_storage
+    if ess is not None and ess.current_soc is not None:
+        return ess.current_soc
+    if coordinator.current_power_flow is not None:
+        return coordinator.current_power_flow.energy_soc
+    return None
 
 SENSORS = [
     LivoltekSensorEntityDescription(
@@ -59,8 +66,8 @@ SENSORS = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        enabled=lambda x: x.current_power_flow is not None,
-        value_fn=lambda x: _get_pf(x, "energy_soc", "energySoc"),
+        enabled=lambda x: x.energy_storage is not None or x.current_power_flow is not None,
+        value_fn=_battery_soc,
     ),
     LivoltekSensorEntityDescription(
         key="power_grid_power",
