@@ -38,6 +38,18 @@ def build_device_details(**overrides: Any) -> SimpleNamespace:
     return SimpleNamespace(**payload)
 
 
+def build_energy_storage(**overrides: Any) -> SimpleNamespace:
+    """Create a fake energy storage object."""
+    payload = {
+        "current_soc": 72.0,
+        "battery_sn": "BAT-001",
+        "bmscapacity": 10000,
+        "cycle_count": 42,
+    }
+    payload.update(overrides)
+    return SimpleNamespace(**payload)
+
+
 def make_thread(result: Any) -> SimpleNamespace:
     """Wrap a result in an object with the generated client's get() API."""
     return SimpleNamespace(get=lambda: result)
