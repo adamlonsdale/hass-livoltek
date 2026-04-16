@@ -87,10 +87,10 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         loop = asyncio.get_running_loop()
         user_sites = await loop.run_in_executor(
             None,
-            lambda: api.list_sites(
+            lambda: api.hess_api_user_sites_list_get(
                 user_token,
-                size=10,
-                page=1,
+                1,
+                10,
                 _preload_content=True,
                 _request_timeout=API_REQUEST_TIMEOUT,
             ),
@@ -98,23 +98,11 @@ class LivoltekFlowHandler(ConfigFlow, domain=DOMAIN):
         if not user_sites:
             LOGGER.warning("Livoltek API returned empty response for sites list")
             return []
-        first_result = user_sites[0]
-        if first_result is None or first_result.data is None:
+        if user_sites.data is None:
             LOGGER.warning("Livoltek API returned empty site data")
             return []
 
-        return first_result.data.list or []
-
-        if not user_sites:
-            LOGGER.warning("Livoltek API returned empty response for sites list")
-            return []
-
-        first_result = user_sites[0]
-        if first_result is None or first_result.data is None:
-            LOGGER.warning("Livoltek API returned empty site data")
-            return []
-
-        return first_result.data.list or []
+        return user_sites.data.list or []
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
