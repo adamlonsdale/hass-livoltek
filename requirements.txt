@@ -3,6 +3,6 @@ colorlog==6.10.1
 homeassistant==2025.2.1
 pycares<5
 ruff==0.14.2
-pip>=21.0,<25.4
+pip>=21.0,<26.1
 urllib3>=1.26.5,<3
 pylivoltek==1.0.9
