@@ -53,13 +53,25 @@ def _battery_soc(coordinator: Any) -> float | None:
     """Return battery SOC, preferring /ESS and falling back to curPowerflow."""
     ess = coordinator.energy_storage
 
+    def _as_float(value: Any) -> float | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, str) and value.lower() == "unknown":
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
     if ess is not None:
         value = None
 
         if isinstance(ess, dict):
-            value = ess.get("current_soc", ess.get("currentSoc"))
+            value = ess.get("current_soc")
+            if _as_float(value) is None:
+                value = ess.get("currentSoc")
 
-            if value in (None, "", "unknown"):
+            if _as_float(value) is None:
                 history_map = ess.get("historyMap") or {}
                 if isinstance(history_map, dict):
                     latest_ts = None
@@ -86,20 +98,16 @@ def _battery_soc(coordinator: Any) -> float | None:
                     value = latest_soc
         else:
             value = getattr(ess, "current_soc", None)
-            if value is None:
+            if _as_float(value) is None:
                 value = getattr(ess, "currentSoc", None)
 
-        try:
-            return float(value) if value is not None else None
-        except (TypeError, ValueError):
-            return None
+        parsed_soc = _as_float(value)
+        if parsed_soc is not None:
+            return parsed_soc
 
     if coordinator.current_power_flow is not None:
         value = _get_pf(coordinator, "energy_soc", "energySoc")
-        try:
-            return float(value) if value is not None else None
-        except (TypeError, ValueError):
-            return None
+        return _as_float(value)
 
     return None
 
