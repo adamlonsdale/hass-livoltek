@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from typing import Any
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+
+import aiohttp
 
 from homeassistant.auth.jwt_wrapper import PyJWT
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -172,7 +172,7 @@ async def async_get_device_list(
 
 
 async def async_get_energy_storage(
-    api: DefaultApi, user_token: str, site_id: str, auth_token: str
+    api: DefaultApi, user_token: str, site_id: str
 ) -> EnergyStore | None:
     """Get energy storage information from the /ESS endpoint."""
     try:
@@ -195,6 +195,8 @@ async def async_get_energy_storage(
             "Failed to fetch energy storage data for site %s: %s", site_id, e
         )
         return None
+    except asyncio.CancelledError:
+        raise
     except Exception as e:
         LOGGER.warning(
             "Unexpected error fetching energy storage for site %s: %s", site_id, e
@@ -204,27 +206,29 @@ async def async_get_energy_storage(
 
 
 async def async_get_energy_storage_direct(
-    host: str, user_token: str, site_id: str, auth_token: str
+    hass, host: str, user_token: str, site_id: str, auth_token: str
 ) -> dict[str, Any] | None:
     """Fetch /ESS directly, bypassing pylivoltek wrapper issues."""
+    session = async_get_clientsession(hass)
+    url = f"{host.rstrip('/')}/hess/api/site/{site_id}/ESS"
+
     try:
-        url = f"{host}/hess/api/site/{site_id}/ESS?{urlencode({'userToken': user_token})}"
+        async with session.get(
+            url,
+            params={"userToken": user_token},
+            headers={
+                "Authorization": auth_token,
+                "Accept": "application/json",
+            },
+            timeout=aiohttp.ClientTimeout(total=API_REQUEST_TIMEOUT),
+        ) as resp:
+            resp.raise_for_status()
+            payload = await resp.json()
 
-        def _fetch() -> dict[str, Any] | None:
-            req = Request(
-                url,
-                headers={
-                    "Authorization": auth_token,
-                    "Accept": "application/json",
-                },
-            )
-            with urlopen(req, timeout=API_REQUEST_TIMEOUT) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-            return payload.get("data")
-
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, _fetch)
-    except Exception as e:
+        return payload.get("data")
+    except asyncio.CancelledError:
+        raise
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError) as e:
         LOGGER.warning(
             "Direct /ESS fetch failed for site %s: %s", site_id, e
         )

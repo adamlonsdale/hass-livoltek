@@ -87,14 +87,17 @@ def _battery_soc(coordinator: Any) -> float | None:
                             if not isinstance(item, dict):
                                 continue
                             soc = item.get("energySoc")
+                            parsed_soc = _as_float(soc)
+                            if parsed_soc is None:
+                                continue
                             item_ts = item.get("time", bucket_ts)
                             try:
                                 item_ts = int(item_ts)
                             except (TypeError, ValueError):
                                 item_ts = bucket_ts
-                            if soc is not None and (latest_ts is None or item_ts >= latest_ts):
+                            if latest_ts is None or item_ts >= latest_ts:
                                 latest_ts = item_ts
-                                latest_soc = soc
+                                latest_soc = parsed_soc
                     value = latest_soc
         else:
             value = getattr(ess, "current_soc", None)

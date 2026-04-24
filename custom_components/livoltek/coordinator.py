@@ -78,11 +78,15 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
             api,
             self.config_entry.data[CONF_USERTOKEN_ID],
             self.config_entry.data[CONF_SITE_ID],
-            self.access_token,
         )
 
         if energy_storage is None:
+            LOGGER.debug(
+                "Wrapper /ESS returned no data; falling back to direct /ESS fetch for site %s",
+                self.config_entry.data[CONF_SITE_ID],
+            )
             energy_storage = await async_get_energy_storage_direct(
+                self.hass,
                 api.api_client.configuration.host,
                 self.config_entry.data[CONF_USERTOKEN_ID],
                 self.config_entry.data[CONF_SITE_ID],
