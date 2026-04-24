@@ -22,6 +22,7 @@ from .helper import (
     async_get_cur_power_flow,
     async_get_device_list,
     async_get_energy_storage,
+    async_get_energy_storage_direct,
     async_get_recent_grid,
     async_get_recent_solar,
 )
@@ -79,6 +80,19 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
             self.config_entry.data[CONF_SITE_ID],
         )
 
+        if energy_storage is None:
+            LOGGER.debug(
+                "Wrapper /ESS returned no data; falling back to direct /ESS fetch for site %s",
+                self.config_entry.data[CONF_SITE_ID],
+            )
+            energy_storage = await async_get_energy_storage_direct(
+                self.hass,
+                api.api_client.configuration.host,
+                self.config_entry.data[CONF_USERTOKEN_ID],
+                self.config_entry.data[CONF_SITE_ID],
+                self.access_token,
+            )
+
         recent_grid = await async_get_recent_grid(
             api,
             self.config_entry.data[CONF_USERTOKEN_ID],
@@ -106,3 +120,4 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.current_power_flow = current_power_flow
         self.energy_storage = energy_storage
         LOGGER.debug("Current Power Flow: %s", current_power_flow)
+        LOGGER.debug("Energy Storage (/ESS): %s", energy_storage)
