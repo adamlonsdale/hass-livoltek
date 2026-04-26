@@ -50,12 +50,68 @@ def _get_pf(coordinator, attr: str, json_key: str):
     return getattr(pf, attr, None)
 
 def _battery_soc(coordinator: Any) -> float | None:
-    """Return battery SOC, preferring the /ESS endpoint over /curPowerflow."""
+    """Return battery SOC, preferring /ESS and falling back to curPowerflow."""
     ess = coordinator.energy_storage
-    if ess is not None and ess.current_soc is not None:
-        return ess.current_soc
+
+    def _as_float(value: Any) -> float | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, str) and value.lower() == "unknown":
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    if ess is not None:
+        value = None
+
+        if isinstance(ess, dict):
+            value = ess.get("current_soc")
+            if _as_float(value) is None:
+                value = ess.get("currentSoc")
+
+            if _as_float(value) is None:
+                history_map = ess.get("historyMap") or {}
+                if isinstance(history_map, dict):
+                    latest_ts = None
+                    latest_soc = None
+                    for bucket_key, bucket_values in history_map.items():
+                        try:
+                            bucket_ts = int(bucket_key)
+                        except (TypeError, ValueError):
+                            bucket_ts = -1
+                        if not isinstance(bucket_values, list):
+                            continue
+                        for item in bucket_values:
+                            if not isinstance(item, dict):
+                                continue
+                            soc = item.get("energySoc")
+                            parsed_soc = _as_float(soc)
+                            if parsed_soc is None:
+                                continue
+                            item_ts = item.get("time", bucket_ts)
+                            try:
+                                item_ts = int(item_ts)
+                            except (TypeError, ValueError):
+                                item_ts = bucket_ts
+                            if latest_ts is None or item_ts >= latest_ts:
+                                latest_ts = item_ts
+                                latest_soc = parsed_soc
+                    value = latest_soc
+        else:
+            value = getattr(ess, "current_soc", None)
+            if _as_float(value) is None:
+                value = getattr(ess, "currentSoc", None)
+
+        parsed_soc = _as_float(value)
+        if parsed_soc is not None:
+            return parsed_soc
+
     if coordinator.current_power_flow is not None:
-        return _get_pf(coordinator, "energy_soc", "energySoc")
+        value = _get_pf(coordinator, "energy_soc", "energySoc")
+        return _as_float(value)
+
     return None
 
 SENSORS = [
