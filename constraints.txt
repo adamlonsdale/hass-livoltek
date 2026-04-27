@@ -1,1 +1,1 @@
-pycares<5
+pycares<6
