@@ -46,7 +46,7 @@ def _get_pf(coordinator, attr: str, json_key: str):
     if pf is None:
         return None
     if isinstance(pf, dict):
-        return pf.get(json_key)
+        return pf.get(json_key) if json_key in pf else pf.get(attr)
     return getattr(pf, attr, None)
 
 def _battery_soc(coordinator: Any) -> float | None:
