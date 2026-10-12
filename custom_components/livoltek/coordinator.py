@@ -18,6 +18,7 @@ from .const import (
 
 from pylivoltek.rest import ApiException
 from requests.structures import CaseInsensitiveDict
+from urllib3.exceptions import HTTPError
 from .helper import (
     async_get_api_client,
     async_get_site,
@@ -53,6 +54,20 @@ class LivoltekDataUpdateCoordinator(DataUpdateCoordinator):
         self.config_entry = entry
 
     async def _async_update_data(self):
+        """Fetch system status; a network outage or a server error is a normal failed update.
+
+        Without DNS or with the portal down, urllib3 raises its own errors and the API
+        returns 5xx: as UpdateFailed, Home Assistant logs it once and retries, instead of
+        reporting "Unexpected error fetching livoltek data".
+        """
+        try:
+            return await self._async_update_with_relogin()
+        except ApiException as err:
+            raise UpdateFailed(f"Livoltek API error: {err.status}") from err
+        except (HTTPError, OSError) as err:
+            raise UpdateFailed(f"Cannot reach Livoltek: {err}") from err
+
+    async def _async_update_with_relogin(self):
         """Fetch system status from Livoltek.
 
         If the server rejects the cached login token (it can invalidate it before

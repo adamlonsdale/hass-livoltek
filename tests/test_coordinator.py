@@ -249,13 +249,32 @@ async def test_async_update_data_does_not_retry_other_errors(
     livoltek_entry,
     monkeypatch,
 ) -> None:
-    """Errors other than 401/403 are not retried."""
+    """Errors other than 401/403 are not retried, and fail the update cleanly."""
+    from homeassistant.helpers.update_coordinator import UpdateFailed
     from pylivoltek.rest import ApiException
 
     coordinator = LivoltekDataUpdateCoordinator(hass, livoltek_entry)
     get_api_client = AsyncMock(return_value=(object(), "token"))
     _patch_fetch(monkeypatch, get_api_client, AsyncMock(side_effect=ApiException(status=500)))
 
-    with pytest.raises(ApiException):
+    with pytest.raises(UpdateFailed):
         await coordinator._async_update_data()
     get_api_client.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_network_outage_is_update_failed(
+    hass,
+    livoltek_entry,
+    monkeypatch,
+) -> None:
+    """No DNS / portal unreachable: UpdateFailed, not an unexpected error."""
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+    from urllib3.exceptions import MaxRetryError
+
+    coordinator = LivoltekDataUpdateCoordinator(hass, livoltek_entry)
+    get_api_client = AsyncMock(return_value=(object(), "token"))
+    _patch_fetch(monkeypatch, get_api_client, AsyncMock(side_effect=MaxRetryError(None, "/site", "no DNS")))
+
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
