@@ -172,7 +172,7 @@ SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=1,
-        enabled=lambda x: x.todays_grid["positive"] is not None,
+        enabled=lambda x: (x.todays_grid or {}).get("positive") is not None,
         value_fn=lambda x: float(x.todays_grid["positive"]) if x.todays_grid else None,
     ),
     LivoltekSensorEntityDescription(
@@ -182,7 +182,7 @@ SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=1,
-        enabled=lambda x: x.todays_grid["negative"] is not None,
+        enabled=lambda x: (x.todays_grid or {}).get("negative") is not None,
         value_fn=lambda x: float(x.todays_grid["negative"]) if x.todays_grid else None,
     ),
     LivoltekSensorEntityDescription(
@@ -192,7 +192,7 @@ SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=1,
-        enabled=lambda x: x.todays_solar["powerGeneration"] is not None,
+        enabled=lambda x: (x.todays_solar or {}).get("powerGeneration") is not None,
         value_fn=lambda x: float(x.todays_solar["powerGeneration"])
         if x.todays_solar
         else None,

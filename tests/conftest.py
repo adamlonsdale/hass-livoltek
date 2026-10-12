@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+import inspect
 import os
 from pathlib import Path
 import sys
@@ -14,6 +15,7 @@ from homeassistant import config_entries, loader
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import frame
 
 
 DOMAIN = "livoltek"
@@ -75,6 +77,8 @@ async def hass(tmp_path: Path) -> AsyncIterator[HomeAssistant]:
 
     hass = HomeAssistant(str(tmp_path))
     loader.async_setup(hass)
+    if hasattr(frame, "async_setup"):  # needed by DataUpdateCoordinator on newer HA
+        frame.async_setup(hass)
     hass.config_entries = config_entries.ConfigEntries(hass, {})
     await hass.config_entries.async_initialize()
     await hass.async_start()
@@ -89,7 +93,12 @@ async def hass(tmp_path: Path) -> AsyncIterator[HomeAssistant]:
 @pytest.fixture
 def livoltek_entry() -> ConfigEntry:
     """Build a representative Livoltek config entry."""
+    extra = {}
+    # Home Assistant 2025.2+ requires subentries_data; older releases reject it.
+    if "subentries_data" in inspect.signature(ConfigEntry.__init__).parameters:
+        extra["subentries_data"] = ()
     return ConfigEntry(
+        **extra,
         data={
             CONF_API_KEY: "api-key",
             CONF_EMEA_ID: False,
